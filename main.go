@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/integrii/flaggy"
@@ -131,10 +132,19 @@ func script(matches map[string]string, statePath string, out io.Writer) error {
 
 	cmd := fmt.Sprintf("terraform state mv -state=%s", statePath)
 	total := len(matches)
+
+	// Go maps are unordered. We want instead a stable iteration order, to make it
+	// possible to compare scripts.
+	destroys := make([]string, 0, len(matches))
+	for d := range matches {
+		destroys = append(destroys, d)
+	}
+	sort.Strings(destroys)
+
 	i := 1
-	for d, c := range matches {
+	for _, d := range destroys {
 		fmt.Fprintf(out, "echo \">>> %d/%d\"\n", i, total)
-		fmt.Fprintf(out, "%s \\\n    '%s' \\\n    '%s'\n\n", cmd, d, c)
+		fmt.Fprintf(out, "%s \\\n    '%s' \\\n    '%s'\n\n", cmd, d, matches[d])
 		i++
 	}
 	return nil
