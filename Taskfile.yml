@@ -34,3 +34,77 @@ tasks:
         sh: which gotestsum 2> /dev/null; true
       TESTRUNNER: "{{if .GOTESTSUM}}{{.GOTESTSUM}}{{else}}go test{{end}}"
 
+  #
+  # usage: env RELEASE_TAG=v0.1.0 gopass task release
+  #
+  release:
+    desc: Build a release and upload to GitHub as draft. You need to transition
+      from draft to published in the web UI.
+    preconditions:
+      - sh: test -n "$RELEASE_TAG"
+        msg: "error: missing environment variable RELEASE_TAG"
+      - sh: test -z $(git status --porcelain)
+        msg: "error: git dirty"
+      - sh: test -z $(git status --branch --porcelain | grep ahead)
+        msg: "error: git local branch ahead"
+    cmds:
+      # - task: unit-test
+      # We create the (local) git tag now, after having ran the unit tests and
+      # before building the executables, so that we can embed this information
+      # in the binaries.
+      # To recover: delete local tag: git tag --delete tagname
+      - git tag -a {{.RELEASE_TAG}} -m ''
+      - task: release-linux
+      - task: release-darwin
+      # - task: system-test
+      - task: test
+      # We create the release as a draft (that is: not visible to the public).
+      # The act of "publishing" the release is left to a human from the web UI.
+      - >
+        github-release release
+        --tag {{.RELEASE_TAG}}
+        --draft
+        --description
+        "See the [CHANGELOG](https://github.com/$GITHUB_USER/$GITHUB_REPO/blob/{{.RELEASE_TAG}}/CHANGELOG.md)"
+      # Upload the artifacts.
+      - >
+        github-release upload
+        --tag {{.RELEASE_TAG}}
+        --name terravalet-linux-amd64.zip
+        --file bin/linux/terravalet-linux-amd64.zip
+      - >
+        github-release upload
+        --tag {{.RELEASE_TAG}}
+        --name terravalet-darwin-amd64.zip
+        --file bin/darwin/terravalet-darwin-amd64.zip
+      # We don't push the git tag. Instead, in the web UI, the act of
+      # transitioning the release from draft to published will create the
+      # corresponding tag in the remote repository. This is safer, because it
+      # reduces the situations when one might be tempted to delete a public tag
+      # due to a mistake in the release.
+      - cmd: |
+          echo "Draft release $RELEASE_TAG created successfully."
+          echo "Remember to publish it in the GitHub web UI https://github.com/$GITHUB_USER/$GITHUB_REPO/releases"
+        silent: true
+    env:
+      GITHUB_USER: pix4d
+      GITHUB_REPO: terravalet
+      # GITHUB_TOKEN expected to be set securely via `gopass` or equivalent
+  release-linux:
+    dir: bin/linux
+    cmds: &release-cmds
+      - go build -v -ldflags="{{.LDFLAGS}}" ../..
+      - zip terravalet-$GOOS-$GOARCH.zip terravalet
+    env:
+      CGO_ENABLED: 0
+      GOOS: linux
+      GOARCH: amd64
+    vars: *build-vars
+  release-darwin:
+    dir: bin/darwin
+    cmds: *release-cmds
+    env:
+      CGO_ENABLED: 0
+      GOOS: darwin
+      GOARCH: amd64
+    vars: *build-vars
