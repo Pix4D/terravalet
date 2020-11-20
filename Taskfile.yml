@@ -1,0 +1,36 @@
+# See https://taskfile.dev for more information.
+# Based on https://github.com/marco-m/timeit/blob/master/Taskfile.yml
+
+version: '3'
+
+tasks:
+
+  default:
+    deps: [test]
+
+  clean:
+    desc: Delete build artifacts
+    cmds: [rm -rf bin/*]
+
+  terravalet:
+    desc: Build the terravalet executable
+    dir: bin
+    cmds:
+      - go build -v -ldflags="{{.LDFLAGS}}" ..
+    vars: &build-vars
+      FULL_VERSION:
+        sh: git describe --long --dirty --always
+      SHORT_VERSION:
+        sh: git describe --abbrev=0
+      LDFLAGS: -w -s -X main.fullVersion={{.FULL_VERSION}} -X main.shortVersion={{.SHORT_VERSION}}
+
+  test:
+    desc: Run the integration tests
+    deps: [terravalet]
+    cmds:
+      - "{{.TESTRUNNER}} ./..."
+    vars:
+      GOTESTSUM:
+        sh: which gotestsum 2> /dev/null; true
+      TESTRUNNER: "{{if .GOTESTSUM}}{{.GOTESTSUM}}{{else}}go test{{end}}"
+
