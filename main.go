@@ -37,7 +37,7 @@ func run(args []string, out io.Writer) error {
 	flaggy.String(&localStatePath, "", "local-state", "Path to the local state to modify (both src and dst).")
 
 	flaggy.SetVersion(fullVersion)
-	flaggy.ParseArgs(args)
+	flaggy.ParseArgs(args) // This might call os.Exit() :-/
 
 	inFile, err := os.Open(planPath)
 	if err != nil {
