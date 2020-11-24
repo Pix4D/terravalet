@@ -1,0 +1,12 @@
+  # aws_batch_compute_environment.concourse_gpu_batch will be created
+  # aws_instance.foo["cloud"] will be created
+  # aws_instance.bar will be created
+
+  # module.ci.aws_batch_compute_environment.concourse_gpu_batch will be destroyed
+  # module.ci.aws_instance.foo["cloud"] will be destroyed
+  # module.ci.aws_instance.bar will be destroyed
+
+  # module.prometheus.module.cloud-init.data.template_cloudinit_config.main will be read during apply
+  # (config refers to values not yet known)
+  # module.workers["cloud"].module.cloud_init.data.template_cloudinit_config.main will be read during apply
+  # (config refers to values not yet known)

@@ -65,11 +65,11 @@ NOTE: It us up to the user to ensure that the migration number is correct with r
 
 1. Install [github-release](https://github.com/github-release/github-release).
 2. Install [gopass](https://github.com/gopasspw/gopass) or equivalent.
-2. Configure a GitHub token.
-   2.1 Go to [Personal Access tokens](https://github.com/settings/tokens)
-   2.2 Click on "Generate new token"
-   2.3 Select only the `repo` scope
-3. Store the token securely with a tool like `gopass`. The name `GITHUB_TOKEN` is expected by `github-release`
+3. Configure a GitHub token:
+   3.1 Go to [Personal Access tokens](https://github.com/settings/tokens)
+   3.2 Click on "Generate new token"
+   3.3 Select only the `repo` scope
+4. Store the token securely with a tool like `gopass`. The name `GITHUB_TOKEN` is expected by `github-release`
    ```
    $ gopass insert gh/terravalet/GITHUB_TOKEN
    ```
