@@ -18,26 +18,14 @@ Collect informations for Terravalet:
 
 ```
 $ cd $ROOT_MODULE_DIR
-$ terraform plan -no-color 2>&1 | tee ~/work/plan-01.txt
+$ terraform plan -no-color 2>&1 | tee plan-01.txt
 ```
 
-### Current
-
-Generate a script with local state.
-Running this script will NOT change the remote source state.
+Take as input the Terraform plan `plan-01.txt` and generate UP and DOWN migration scripts:
 
 ```
-$ terravalet ~/work/plan-01.txt ../migrations/001_$TITLE.up.sh
-```
-
-### Upcoming
-
-Take as input the Terraform plan `~/work/plan-01.txt` and generate two migration scripts with prefix `../migrations/001_TITLE`:
-- `../migrations/001_TITLE.up.sh`
-- `../migrations/001_TITLE.down.sh`
-
-```
-$ terravalet -scripts=../migrations/001_TITLE -plan=~/work/plan-01.txt
+$ terravalet -plan=plan-01.txt \
+    -up=../migrations/001_TITLE.up.sh -down=../migrations/001_TITLE.down.sh
 ```
 
 NOTE: It us up to the user to ensure that the migration number is correct with respect to what is already present in the migration directory.

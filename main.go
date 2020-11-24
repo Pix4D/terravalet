@@ -22,43 +22,74 @@ var (
 )
 
 func main() {
-	if err := run(os.Args[1:], os.Stdout); err != nil {
+	if err := run(os.Args[1:]); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(args []string, out io.Writer) error {
+func run(args []string) error {
 	planPath := ""
+	upPath := ""
+	downPath := ""
 	localStatePath := "local.tfstate"
 
 	flaggy.ResetParser() // flaggy keeps gobal state; workaround for testing :-(
 	flaggy.SetDescription("A simple valet for terraform operations (WIP).")
-	flaggy.AddPositionalValue(&planPath, "plan", 1, true, "Path to the output of terraform plan.")
+	flaggy.String(&planPath, "", "plan", "Path to the output of terraform plan.")
+	flaggy.String(&upPath, "", "up", "Path to the up migration script to generate (NNN_TITLE.up.sh).")
+	flaggy.String(&downPath, "", "down", "Path to the down migration script to generate (NNN_TITLE.down.sh).")
 	flaggy.String(&localStatePath, "", "local-state", "Path to the local state to modify (both src and dst).")
 
 	flaggy.SetVersion(fullVersion)
 	flaggy.ParseArgs(args) // This might call os.Exit() :-/
 
-	inFile, err := os.Open(planPath)
-	if err != nil {
-		return fmt.Errorf("reading the tf plan file: %v", err)
+	if planPath == "" {
+		return fmt.Errorf("missing value for -plan")
 	}
-	defer inFile.Close()
+	if upPath == "" {
+		return fmt.Errorf("missing value for -up")
+	}
+	if downPath == "" {
+		return fmt.Errorf("missing value for -down")
+	}
 
-	create, destroy, err := parse(inFile)
+	planFile, err := os.Open(planPath)
+	if err != nil {
+		return fmt.Errorf("opening the terraform plan file: %v", err)
+	}
+	defer planFile.Close()
+
+	upFile, err := os.Create(upPath)
+	if err != nil {
+		return fmt.Errorf("creating the up file: %v", err)
+	}
+	defer upFile.Close()
+
+	downFile, err := os.Create(downPath)
+	if err != nil {
+		return fmt.Errorf("creating the down file: %v", err)
+	}
+	defer downFile.Close()
+
+	create, destroy, err := parse(planFile)
 	if err != nil {
 		return fmt.Errorf("parse: %v", err)
 	}
 
-	matches, err := match(create, destroy)
+	upMatches, downMatches, err := match(create, destroy)
 	if err != nil {
 		return fmt.Errorf("match: %v", err)
 	}
 
-	if err := script(matches, localStatePath, out); err != nil {
-		return fmt.Errorf("creating script: %v", err)
+	if err := script(upMatches, localStatePath, upFile); err != nil {
+		return fmt.Errorf("writing the up script: %v", err)
 	}
+
+	if err := script(downMatches, localStatePath, downFile); err != nil {
+		return fmt.Errorf("writing the down script: %v", err)
+	}
+
 	return nil
 }
 
@@ -110,9 +141,10 @@ func parse(rd io.Reader) ([]string, []string, error) {
 // The criterium used to perform a match is that one of the two elements must be a
 // prefix of the other. Note that the longest element could be the old or the new one,
 // it depends.
-func match(create, destroy []string) (map[string]string, error) {
+func match(create, destroy []string) (map[string]string, map[string]string, error) {
 	// old -> new (or equvalenty: destroy -> create)
-	matches := map[string]string{}
+	upMatches := map[string]string{}
+	downMatches := map[string]string{}
 
 	// 1. Create and destroy give us the direction:
 	//    terraform state mv destroy[i] create[j]
@@ -124,12 +156,13 @@ func match(create, destroy []string) (map[string]string, error) {
 	for _, d := range destroy {
 		for _, c := range create {
 			if strings.HasSuffix(c, d) || strings.HasSuffix(d, c) {
-				matches[d] = c
+				upMatches[d] = c
+				downMatches[c] = d
 				break
 			}
 		}
 	}
-	return matches, nil
+	return upMatches, downMatches, nil
 }
 
 // Given a map old->new, create a script that for each element in the map issues the

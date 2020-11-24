@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -12,31 +13,60 @@ import (
 
 func TestSuccess(t *testing.T) {
 	testCases := []struct {
-		planPath       string
-		wantScriptPath string
+		planPath     string
+		wantUpPath   string
+		wantDownPath string
 	}{
 		{
 			"testdata/plan-synthetic-01.txt",
 			"testdata/001_synthetic.up.sh",
+			"testdata/001_synthetic.down.sh",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.planPath, func(t *testing.T) {
-			want, err := ioutil.ReadFile(tc.wantScriptPath)
+			wantUp, err := ioutil.ReadFile(tc.wantUpPath)
 			if err != nil {
-				t.Fatalf("reading want file %q: error: %v", tc.wantScriptPath, err)
+				t.Fatalf("reading want up file: %v", err)
+			}
+			wantDown, err := ioutil.ReadFile(tc.wantDownPath)
+			if err != nil {
+				t.Fatalf("reading want down file: %v", err)
 			}
 
-			var got bytes.Buffer
-			if err := run([]string{tc.planPath}, &got); err != nil {
+			tmpDir, err := ioutil.TempDir("", "terravalet")
+			if err != nil {
+				t.Fatalf("creating temporary dir: %v", err)
+			}
+			defer os.RemoveAll(tmpDir)
+
+			tmpUpPath := tmpDir + "/up"
+			tmpDownPath := tmpDir + "/down"
+
+			args := []string{"-plan", tc.planPath, "-up", tmpUpPath, "-down", tmpDownPath}
+			if err := run(args); err != nil {
 				t.Fatalf("got error: %v; want: no error", err)
 			}
 
-			if !bytes.Equal(got.Bytes(), want) {
+			tmpUp, err := ioutil.ReadFile(tmpUpPath)
+			if err != nil {
+				t.Fatalf("reading tmp up file: %v", err)
+			}
+			tmpDown, err := ioutil.ReadFile(tmpDownPath)
+			if err != nil {
+				t.Fatalf("reading tmp down file: %v", err)
+			}
+
+			if !bytes.Equal(tmpUp, wantUp) {
 				var outDiff bytes.Buffer
-				diff.Text("got", tc.wantScriptPath, got.Bytes(), want, &outDiff)
-				t.Fatalf("got the following differences:\n%v", outDiff.String())
+				diff.Text("got", tc.wantUpPath, tmpUp, wantUp, &outDiff)
+				t.Errorf("up script: got the following differences:\n%v", outDiff.String())
+			}
+			if !bytes.Equal(tmpDown, wantDown) {
+				var outDiff bytes.Buffer
+				diff.Text("got", tc.wantDownPath, tmpDown, wantDown, &outDiff)
+				t.Errorf("down script: got the following differences:\n%v", outDiff.String())
 			}
 		})
 	}
@@ -44,20 +74,22 @@ func TestSuccess(t *testing.T) {
 
 func TestFailure(t *testing.T) {
 	testCases := []struct {
-		planPath  string
+		args      []string
 		wantError string
 	}{
 		{
-			"testdata/plan-non-existing.txt",
-			"reading the tf plan file: open testdata/plan-non-existing.txt: no such file or directory",
+			[]string{},
+			"missing value for -plan",
+		},
+		{
+			[]string{"-plan=nonexisting", "-up=up", "-down=down"},
+			"opening the terraform plan file: open nonexisting: no such file or directory",
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.planPath, func(t *testing.T) {
-			var got bytes.Buffer
-
-			err := run([]string{tc.planPath}, &got)
+		t.Run(strings.Join(tc.args, "_"), func(t *testing.T) {
+			err := run(tc.args)
 
 			if err == nil {
 				t.Fatalf("\ngot:  no error\nwant: %v", tc.wantError)
