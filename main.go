@@ -68,7 +68,7 @@ func parse(rd io.Reader) ([]string, []string, error) {
 	// " # module.ci.module.workers["windows-vs2019"].aws_autoscaling_schedule.night_mode will be destroyed"
 	// " # module.workers["windows-vs2019"].aws_autoscaling_schedule.night_mode will be created"
 
-	var re = regexp.MustCompile(`# (.+) will be (destroyed|created)`)
+	var re = regexp.MustCompile(`# (.+) will be (.+)`)
 
 	var create []string
 	var destroy []string
@@ -91,6 +91,8 @@ func parse(rd io.Reader) ([]string, []string, error) {
 				create = append(create, m[1])
 			case "destroyed":
 				destroy = append(destroy, m[1])
+			case "read during apply":
+				// do nothing
 			default:
 				return create, destroy,
 					fmt.Errorf("line %q, unexpected action %q", line, m[2])
