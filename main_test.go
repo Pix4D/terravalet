@@ -39,3 +39,35 @@ func TestSuccess(t *testing.T) {
 		})
 	}
 }
+
+func TestFailure(t *testing.T) {
+	testCases := []struct {
+		planPath  string
+		wantError string
+	}{
+		{
+			"testdata/plan-non-existing.txt",
+			"reading the tf plan file: open testdata/plan-non-existing.txt: no such file or directory",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.planPath, func(t *testing.T) {
+			var got bytes.Buffer
+
+			err := run([]string{tc.planPath}, &got)
+
+			if err == nil {
+				t.Fatalf("\ngot:  no error\nwant: %v", tc.wantError)
+			}
+			if err.Error() != tc.wantError {
+				t.Fatalf("\ngot:  %v\nwant: %v", err, tc.wantError)
+			}
+		})
+	}
+}
+			}
+		})
+	}
+}
+
