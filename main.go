@@ -32,6 +32,7 @@ func run(args []string, out io.Writer) error {
 	planPath := ""
 	localStatePath := "local.tfstate"
 
+	flaggy.ResetParser() // flaggy keeps gobal state; workaround for testing :-(
 	flaggy.SetDescription("A simple valet for terraform operations (WIP).")
 	flaggy.AddPositionalValue(&planPath, "plan", 1, true, "Path to the output of terraform plan.")
 	flaggy.String(&localStatePath, "", "local-state", "Path to the local state to modify (both src and dst).")
