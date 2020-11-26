@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changes
 
+- Migration script: do not print any more the count `>>> 1/N`, because each time N changed, this was causing N spurious diffs, hiding the real elements that changed. The `terravalet_output_format` is now 2.
+
 ### New
 
 - Generate also the DOWN migration script.
