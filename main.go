@@ -175,7 +175,10 @@ func script(matches map[string]string, statePath string, out io.Writer) error {
 	fmt.Fprintf(out, "# This script will move %d items.\n\n", len(matches))
 	fmt.Fprintf(out, "set -e\n\n")
 
-	cmd := fmt.Sprintf("terraform state mv -state=%s", statePath)
+	// -lock=false greatly speeds up operations when the state has many elements
+	// and is safe as long as we use -state=FILE, since this keeps operations
+	// strictly local, without considering the configured backend.
+	cmd := fmt.Sprintf("terraform state mv -lock=false -state=%s", statePath)
 
 	// Go maps are unordered. We want instead a stable iteration order, to make it
 	// possible to compare scripts.

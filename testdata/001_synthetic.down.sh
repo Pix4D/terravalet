@@ -6,15 +6,15 @@
 
 set -e
 
-terraform state mv -state=local.tfstate \
+terraform state mv -lock=false -state=local.tfstate \
     'aws_batch_compute_environment.concourse_gpu_batch' \
     'module.ci.aws_batch_compute_environment.concourse_gpu_batch'
 
-terraform state mv -state=local.tfstate \
+terraform state mv -lock=false -state=local.tfstate \
     'aws_instance.bar' \
     'module.ci.aws_instance.bar'
 
-terraform state mv -state=local.tfstate \
+terraform state mv -lock=false -state=local.tfstate \
     'aws_instance.foo["cloud"]' \
     'module.ci.aws_instance.foo["cloud"]'
 
