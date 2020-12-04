@@ -18,9 +18,9 @@ func TestSuccess(t *testing.T) {
 		wantDownPath string
 	}{
 		{
-			"testdata/plan-synthetic-01.txt",
-			"testdata/001_synthetic.up.sh",
-			"testdata/001_synthetic.down.sh",
+			"testdata/01_exact-match.plan.txt",
+			"testdata/01_exact-match.up.sh",
+			"testdata/01_exact-match.down.sh",
 		},
 	}
 
