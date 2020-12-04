@@ -3,11 +3,13 @@ package main
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/diff"
 )
 
@@ -171,6 +173,83 @@ func TestParseFailure(t *testing.T) {
 			}
 			if err.Error() != tc.wantError.Error() {
 				t.Fatalf("\ngot:  %v\nwant: %v", err, tc.wantError)
+			}
+		})
+	}
+}
+
+func TestMatchSuccess(t *testing.T) {
+	testCases := []struct {
+		description     string
+		create          []string
+		destroy         []string
+		wantUpMatches   map[string]string
+		wantDownMatches map[string]string
+	}{
+		{"increase depth, len 1",
+			[]string{"a.b"},
+			[]string{"b"},
+			map[string]string{"b": "a.b"},
+			map[string]string{"a.b": "b"},
+		},
+		{"decrease depth, len 1",
+			[]string{"b"},
+			[]string{"a.b"},
+			map[string]string{"a.b": "b"},
+			map[string]string{"b": "a.b"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			gotUpMatches, gotDownMatches, err := match(tc.create, tc.destroy)
+
+			if err != nil {
+				t.Fatalf("\ngot:  %v\nwant: no error", err)
+			}
+			if diff := cmp.Diff(tc.wantUpMatches, gotUpMatches); diff != "" {
+				t.Errorf("upMatches: mismatch (-want +got):\n%s", diff)
+			}
+			if diff := cmp.Diff(tc.wantDownMatches, gotDownMatches); diff != "" {
+				t.Errorf("downMatches: mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestMatchFailure(t *testing.T) {
+	testCases := []struct {
+		description string
+		create      []string
+		destroy     []string
+		wantErr     error
+	}{
+		{"len(create) == len(destroy), no match",
+			[]string{"a.b"},
+			[]string{"j.k"},
+			fmt.Errorf("foo"),
+		},
+		{"len(create) > len(destroy), match",
+			[]string{"a.b", "a.j.k"},
+			[]string{"j.k"},
+			fmt.Errorf("foo"),
+		},
+		{"len(create) < len(destroy), match",
+			[]string{"a.b"},
+			[]string{"j.k", "a.b.c.d"},
+			fmt.Errorf("foo"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			_, _, gotErr := match(tc.create, tc.destroy)
+
+			if gotErr == nil {
+				t.Fatalf("\ngot: no error\nwant: %v", tc.wantErr)
+			}
+			if gotErr != tc.wantErr {
+				t.Fatalf("\ngot: %v\nwant: %v", gotErr, tc.wantErr)
 			}
 		})
 	}
