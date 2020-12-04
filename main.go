@@ -13,6 +13,8 @@ import (
 	"strings"
 
 	"github.com/integrii/flaggy"
+	"github.com/scylladb/go-set"
+	"github.com/scylladb/go-set/strset"
 )
 
 var (
@@ -93,19 +95,20 @@ func run(args []string) error {
 	return nil
 }
 
-// Parse the output of "terraform plan" and return a list of elements to be created and a
-// list of elements to be destroyed. The two lists are unordered.
+// Parse the output of "terraform plan" and return two sets, the first a set of elements
+// to be created and the second a set of elements to be destroyed. The two sets are
+// unordered.
 //
 // For example:
 // " # module.ci.aws_instance.docker will be destroyed"
 // " # aws_instance.docker will be created"
 // " # module.ci.module.workers["windows-vs2019"].aws_autoscaling_schedule.night_mode will be destroyed"
 // " # module.workers["windows-vs2019"].aws_autoscaling_schedule.night_mode will be created"
-func parse(rd io.Reader) ([]string, []string, error) {
+func parse(rd io.Reader) (*strset.Set, *strset.Set, error) {
 	var re = regexp.MustCompile(`# (.+) will be (.+)`)
 
-	var create []string
-	var destroy []string
+	create := set.NewStringSet()
+	destroy := set.NewStringSet()
 
 	scanner := bufio.NewScanner(rd)
 	for scanner.Scan() {
@@ -117,9 +120,9 @@ func parse(rd io.Reader) ([]string, []string, error) {
 			}
 			switch m[2] {
 			case "created":
-				create = append(create, m[1])
+				create.Add(m[1])
 			case "destroyed":
-				destroy = append(destroy, m[1])
+				destroy.Add(m[1])
 			case "read during apply":
 				// do nothing
 			default:
@@ -136,12 +139,13 @@ func parse(rd io.Reader) ([]string, []string, error) {
 	return create, destroy, nil
 }
 
-// Given two unordered lists create and destroy, return a map that matches each old
-// element in destroy to the corresponding new element in create.
+// Given two unordered sets create and destroy, return two maps, the first that matches
+// each old element in destroy to the corresponding new element in create (up), the
+// second that matches in the opposite direction (down).
 // The criterium used to perform a match is that one of the two elements must be a
 // prefix of the other. Note that the longest element could be the old or the new one,
-// it depends.
-func match(create, destroy []string) (map[string]string, map[string]string, error) {
+// it depends on the inputs.
+func match(create, destroy *strset.Set) (map[string]string, map[string]string, error) {
 	// old -> new (or equvalenty: destroy -> create)
 	upMatches := map[string]string{}
 	downMatches := map[string]string{}
@@ -153,14 +157,34 @@ func match(create, destroy []string) (map[string]string, map[string]string, erro
 	// 	    terraform state mv module.ci.aws_instance.docker           aws_instance.docker
 	//      terraform state mv           aws_instance.docker module.ci.aws_instance.docker
 
-	for _, d := range destroy {
-		for _, c := range create {
+	for _, d := range destroy.List() {
+		for _, c := range create.List() {
 			if strings.HasSuffix(c, d) || strings.HasSuffix(d, c) {
 				upMatches[d] = c
 				downMatches[c] = d
-				break
+				// Remove matched elements from the two sets.
+				destroy.Remove(d)
+				create.Remove(c)
 			}
 		}
+	}
+
+	// Now the two sets create, destroy contain only unmatched elements.
+
+	var msg string
+	if lc := create.Size(); lc != 0 {
+		msg += fmt.Sprintf("%d unmatched create", lc)
+	}
+	if ld := destroy.Size(); ld != 0 {
+		if len(msg) > 0 {
+			msg += fmt.Sprintf(" %d unmatched destroy", ld)
+		} else {
+			msg += fmt.Sprintf("%d unmatched destroy", ld)
+		}
+	}
+
+	if msg != "" {
+		return upMatches, downMatches, fmt.Errorf(msg)
 	}
 	return upMatches, downMatches, nil
 }

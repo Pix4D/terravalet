@@ -11,6 +11,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/diff"
+	"github.com/scylladb/go-set"
+	"github.com/scylladb/go-set/strset"
 )
 
 func TestSuccess(t *testing.T) {
@@ -48,7 +50,7 @@ func TestSuccess(t *testing.T) {
 
 			args := []string{"-plan", tc.planPath, "-up", tmpUpPath, "-down", tmpDownPath}
 			if err := run(args); err != nil {
-				t.Fatalf("got error: %v; want: no error", err)
+				t.Fatalf("\ngot:  %q\nwant: no error", err)
 			}
 
 			tmpUp, err := ioutil.ReadFile(tmpUpPath)
@@ -94,39 +96,43 @@ func TestFailure(t *testing.T) {
 			err := run(tc.args)
 
 			if err == nil {
-				t.Fatalf("\ngot:  no error\nwant: %v", tc.wantError)
+				t.Fatalf("\ngot:  no error\nwant: %q", tc.wantError)
 			}
 			if err.Error() != tc.wantError {
-				t.Fatalf("\ngot:  %v\nwant: %v", err, tc.wantError)
+				t.Fatalf("\ngot:  %q\nwant: %q", err, tc.wantError)
 			}
 		})
 	}
 }
 
+var cmpOpt = cmp.Comparer(func(s1, s2 *strset.Set) bool {
+	return s1.IsEqual(s2)
+})
+
 func TestParseSuccess(t *testing.T) {
 	testCases := []struct {
 		description string
 		line        string
-		wantCreate  []string
-		wantDestroy []string
+		wantCreate  *strset.Set
+		wantDestroy *strset.Set
 	}{
 		{
 			"destroyed is recorded",
 			"  # aws_instance.bar will be destroyed",
-			[]string{},
-			[]string{"aws_instance.bar"},
+			set.NewStringSet(),
+			set.NewStringSet("aws_instance.bar"),
 		},
 		{
 			"created is recorded",
 			"  # aws_instance.bar will be created",
-			[]string{"aws_instance.bar"},
-			[]string{},
+			set.NewStringSet("aws_instance.bar"),
+			set.NewStringSet(),
 		},
 		{
 			"read is skipped",
 			"  # data.foo.bar will be read during apply",
-			[]string{},
-			[]string{},
+			set.NewStringSet(),
+			set.NewStringSet(),
 		},
 	}
 
@@ -137,13 +143,13 @@ func TestParseSuccess(t *testing.T) {
 			gotCreate, gotDestroy, err := parse(rd)
 
 			if err != nil {
-				t.Fatalf("\ngot:  %v\nwant: no error", err)
+				t.Fatalf("\ngot:  %q\nwant: no error", err)
 			}
-			if !stringEqual(gotCreate, tc.wantCreate) {
-				t.Errorf("\ngotCreate:  %v\nwantCreate: %v", gotCreate, tc.wantCreate)
+			if diff := cmp.Diff(tc.wantCreate, gotCreate, cmpOpt); diff != "" {
+				t.Errorf("\ncreate: mismatch (-want +got):\n%s", diff)
 			}
-			if !stringEqual(gotDestroy, tc.wantDestroy) {
-				t.Errorf("\ngotDestroy:  %v\nwantDestroy: %v", gotDestroy, tc.wantDestroy)
+			if diff := cmp.Diff(tc.wantDestroy, gotDestroy, cmpOpt); diff != "" {
+				t.Errorf("\ndestroy: mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
@@ -169,10 +175,10 @@ func TestParseFailure(t *testing.T) {
 			_, _, err := parse(rd)
 
 			if err == nil {
-				t.Fatalf("\ngot:  no error\nwant: %v", tc.wantError)
+				t.Fatalf("\ngot:  no error\nwant: %q", tc.wantError)
 			}
 			if err.Error() != tc.wantError.Error() {
-				t.Fatalf("\ngot:  %v\nwant: %v", err, tc.wantError)
+				t.Fatalf("\ngot:  %q\nwant: %q", err, tc.wantError)
 			}
 		})
 	}
@@ -181,20 +187,20 @@ func TestParseFailure(t *testing.T) {
 func TestMatchSuccess(t *testing.T) {
 	testCases := []struct {
 		description     string
-		create          []string
-		destroy         []string
+		create          *strset.Set
+		destroy         *strset.Set
 		wantUpMatches   map[string]string
 		wantDownMatches map[string]string
 	}{
 		{"increase depth, len 1",
-			[]string{"a.b"},
-			[]string{"b"},
+			set.NewStringSet("a.b"),
+			set.NewStringSet("b"),
 			map[string]string{"b": "a.b"},
 			map[string]string{"a.b": "b"},
 		},
 		{"decrease depth, len 1",
-			[]string{"b"},
-			[]string{"a.b"},
+			set.NewStringSet("b"),
+			set.NewStringSet("a.b"),
 			map[string]string{"a.b": "b"},
 			map[string]string{"b": "a.b"},
 		},
@@ -205,7 +211,7 @@ func TestMatchSuccess(t *testing.T) {
 			gotUpMatches, gotDownMatches, err := match(tc.create, tc.destroy)
 
 			if err != nil {
-				t.Fatalf("\ngot:  %v\nwant: no error", err)
+				t.Fatalf("\ngot:  %q\nwant: no error", err)
 			}
 			if diff := cmp.Diff(tc.wantUpMatches, gotUpMatches); diff != "" {
 				t.Errorf("upMatches: mismatch (-want +got):\n%s", diff)
@@ -220,24 +226,24 @@ func TestMatchSuccess(t *testing.T) {
 func TestMatchFailure(t *testing.T) {
 	testCases := []struct {
 		description string
-		create      []string
-		destroy     []string
+		create      *strset.Set
+		destroy     *strset.Set
 		wantErr     error
 	}{
 		{"len(create) == len(destroy), no match",
-			[]string{"a.b"},
-			[]string{"j.k"},
-			fmt.Errorf("foo"),
+			set.NewStringSet("a.b"),
+			set.NewStringSet("j.k"),
+			fmt.Errorf("1 unmatched create 1 unmatched destroy"),
 		},
 		{"len(create) > len(destroy), match",
-			[]string{"a.b", "a.j.k"},
-			[]string{"j.k"},
-			fmt.Errorf("foo"),
+			set.NewStringSet("a.b", "a.j.k"),
+			set.NewStringSet("j.k"),
+			fmt.Errorf("1 unmatched create"),
 		},
 		{"len(create) < len(destroy), match",
-			[]string{"a.b"},
-			[]string{"j.k", "a.b.c.d"},
-			fmt.Errorf("foo"),
+			set.NewStringSet("a.b"),
+			set.NewStringSet("j.k", "x.a.b"),
+			fmt.Errorf("1 unmatched destroy"),
 		},
 	}
 
@@ -246,23 +252,11 @@ func TestMatchFailure(t *testing.T) {
 			_, _, gotErr := match(tc.create, tc.destroy)
 
 			if gotErr == nil {
-				t.Fatalf("\ngot: no error\nwant: %v", tc.wantErr)
+				t.Fatalf("\ngot:  no error\nwant: %q", tc.wantErr)
 			}
-			if gotErr != tc.wantErr {
-				t.Fatalf("\ngot: %v\nwant: %v", gotErr, tc.wantErr)
+			if gotErr.Error() != tc.wantErr.Error() {
+				t.Fatalf("\ngot:  %q\nwant: %q", gotErr, tc.wantErr)
 			}
 		})
 	}
-}
-
-func stringEqual(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, v := range a {
-		if v != b[i] {
-			return false
-		}
-	}
-	return true
 }
