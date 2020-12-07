@@ -79,9 +79,20 @@ func run(args []string) error {
 		return fmt.Errorf("parse: %v", err)
 	}
 
-	upMatches, downMatches, err := match(create, destroy)
-	if err != nil {
-		return fmt.Errorf("match: %v", err)
+	upMatches, downMatches := match_exact(create, destroy)
+	msg := ""
+	if create.Size() != 0 {
+		elems := create.List()
+		sort.Strings(elems)
+		msg += "\nunmatched create:\n  " + strings.Join(elems, "\n  ")
+	}
+	if destroy.Size() != 0 {
+		elems := destroy.List()
+		sort.Strings(elems)
+		msg += "\nunmatched destroy:\n  " + strings.Join(elems, "\n  ")
+	}
+	if msg != "" {
+		return fmt.Errorf("match_exact:%v", msg)
 	}
 
 	if err := script(upMatches, localStatePath, upFile); err != nil {
@@ -142,10 +153,11 @@ func parse(rd io.Reader) (*strset.Set, *strset.Set, error) {
 // Given two unordered sets create and destroy, return two maps, the first that matches
 // each old element in destroy to the corresponding new element in create (up), the
 // second that matches in the opposite direction (down).
-// The criterium used to perform a match is that one of the two elements must be a
+// Modify the two input sets so that they contain only the remaining (if any) unmatched elements.
+// The criterium used to perform a match_exact is that one of the two elements must be a
 // prefix of the other. Note that the longest element could be the old or the new one,
 // it depends on the inputs.
-func match(create, destroy *strset.Set) (map[string]string, map[string]string, error) {
+func match_exact(create, destroy *strset.Set) (map[string]string, map[string]string) {
 	// old -> new (or equvalenty: destroy -> create)
 	upMatches := map[string]string{}
 	downMatches := map[string]string{}
@@ -170,23 +182,7 @@ func match(create, destroy *strset.Set) (map[string]string, map[string]string, e
 	}
 
 	// Now the two sets create, destroy contain only unmatched elements.
-
-	var msg string
-	if lc := create.Size(); lc != 0 {
-		msg += fmt.Sprintf("%d unmatched create", lc)
-	}
-	if ld := destroy.Size(); ld != 0 {
-		if len(msg) > 0 {
-			msg += fmt.Sprintf(" %d unmatched destroy", ld)
-		} else {
-			msg += fmt.Sprintf("%d unmatched destroy", ld)
-		}
-	}
-
-	if msg != "" {
-		return upMatches, downMatches, fmt.Errorf(msg)
-	}
-	return upMatches, downMatches, nil
+	return upMatches, downMatches
 }
 
 // Given a map old->new, create a script that for each element in the map issues the
