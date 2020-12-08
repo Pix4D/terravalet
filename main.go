@@ -7,11 +7,13 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"regexp"
 	"sort"
 	"strings"
 
+	"github.com/dexyk/stringosim"
 	"github.com/integrii/flaggy"
 	"github.com/scylladb/go-set"
 	"github.com/scylladb/go-set/strset"
@@ -35,6 +37,7 @@ func run(args []string) error {
 	upPath := ""
 	downPath := ""
 	localStatePath := "local.tfstate"
+	fuzzyMatch := false
 
 	flaggy.ResetParser() // flaggy keeps gobal state; workaround for testing :-(
 	flaggy.SetDescription("A simple valet for terraform operations (WIP).")
@@ -42,6 +45,8 @@ func run(args []string) error {
 	flaggy.String(&upPath, "", "up", "Path to the up migration script to generate (NNN_TITLE.up.sh).")
 	flaggy.String(&downPath, "", "down", "Path to the down migration script to generate (NNN_TITLE.down.sh).")
 	flaggy.String(&localStatePath, "", "local-state", "Path to the local state to modify (both src and dst).")
+	flaggy.Bool(&fuzzyMatch, "", "fuzzy-match",
+		"Enable q-gram distance fuzzy matching. WARNING: You must validate by hand the output!")
 
 	flaggy.SetVersion(fullVersion)
 	flaggy.ParseArgs(args) // This might call os.Exit() :-/
@@ -80,19 +85,21 @@ func run(args []string) error {
 	}
 
 	upMatches, downMatches := match_exact(create, destroy)
-	msg := ""
-	if create.Size() != 0 {
-		elems := create.List()
-		sort.Strings(elems)
-		msg += "\nunmatched create:\n  " + strings.Join(elems, "\n  ")
-	}
-	if destroy.Size() != 0 {
-		elems := destroy.List()
-		sort.Strings(elems)
-		msg += "\nunmatched destroy:\n  " + strings.Join(elems, "\n  ")
-	}
-	if msg != "" {
+
+	msg := collectErrors(create, destroy)
+	if msg != "" && !fuzzyMatch {
 		return fmt.Errorf("match_exact:%v", msg)
+	}
+
+	if fuzzyMatch && create.Size() == 0 && destroy.Size() == 0 {
+		return fmt.Errorf("required fuzzy-match but there is nothing to fuzzy")
+	}
+	if fuzzyMatch {
+		upMatches, downMatches = match_fuzzy(create, destroy)
+		msg := collectErrors(create, destroy)
+		if msg != "" {
+			return fmt.Errorf("match_fuzzy:%v", msg)
+		}
 	}
 
 	if err := script(upMatches, localStatePath, upFile); err != nil {
@@ -104,6 +111,21 @@ func run(args []string) error {
 	}
 
 	return nil
+}
+
+func collectErrors(create *strset.Set, destroy *strset.Set) string {
+	msg := ""
+	if create.Size() != 0 {
+		elems := create.List()
+		sort.Strings(elems)
+		msg += "\nunmatched create:\n  " + strings.Join(elems, "\n  ")
+	}
+	if destroy.Size() != 0 {
+		elems := destroy.List()
+		sort.Strings(elems)
+		msg += "\nunmatched destroy:\n  " + strings.Join(elems, "\n  ")
+	}
+	return msg
 }
 
 // Parse the output of "terraform plan" and return two sets, the first a set of elements
@@ -150,13 +172,17 @@ func parse(rd io.Reader) (*strset.Set, *strset.Set, error) {
 	return create, destroy, nil
 }
 
-// Given two unordered sets create and destroy, return two maps, the first that matches
-// each old element in destroy to the corresponding new element in create (up), the
-// second that matches in the opposite direction (down).
+// Given two unordered sets create and destroy, perform an exact match from destroy to create.
+//
+// Return two maps, the first that exact matches each old element in destroy to the
+// corresponding  new element in create (up), the second that matches in the opposite
+// direction (down).
+//
 // Modify the two input sets so that they contain only the remaining (if any) unmatched elements.
+//
 // The criterium used to perform a match_exact is that one of the two elements must be a
-// prefix of the other. Note that the longest element could be the old or the new one,
-// it depends on the inputs.
+// prefix of the other.
+// Note that the longest element could be the old or the new one, it depends on the inputs.
 func match_exact(create, destroy *strset.Set) (map[string]string, map[string]string) {
 	// old -> new (or equvalenty: destroy -> create)
 	upMatches := map[string]string{}
@@ -182,6 +208,81 @@ func match_exact(create, destroy *strset.Set) (map[string]string, map[string]str
 	}
 
 	// Now the two sets create, destroy contain only unmatched elements.
+	return upMatches, downMatches
+}
+
+// Given two unordered sets create and destroy, that have already been processed by
+// match_exact(), perform a fuzzy match from destroy to create.
+//
+// Return two maps, the first that fuzzy matches each old element in destroy to the
+// corresponding  new element in create (up), the second that matches in the opposite
+// direction (down).
+//
+// Modify the two input sets so that they contain only the remaining (if any) unmatched elements.
+//
+// The criterium used to perform a match_fuzzy is that one of the two elements must be a
+// fuzzy match of the other, according to some definition of fuzzy.
+// Note that the longest element could be the old or the new one, it depends on the inputs.
+func match_fuzzy(create, destroy *strset.Set) (map[string]string, map[string]string) {
+	// old -> new (or equvalenty: destroy -> create)
+	upMatches := map[string]string{}
+	downMatches := map[string]string{}
+
+	type candidate struct {
+		Word     string
+		Distance int
+	}
+	distancesD2C := map[string][]candidate{}
+
+	for _, d := range destroy.List() {
+		for _, c := range create.List() {
+			// Here we could also use a custom NGramSizes via
+			// stringosim.QGramSimilarityOptions
+			dist := stringosim.QGram([]rune(d), []rune(c))
+			distancesD2C[d] = append(distancesD2C[d], candidate{c, dist})
+		}
+	}
+
+	// Sort evaluations from best to worse.
+	for _, eval := range distancesD2C {
+		sort.Slice(eval, func(i, j int) bool {
+			return eval[i].Distance < eval[j].Distance
+		})
+	}
+
+	// Create a reverse index; this is used to resolve ties.
+	reverse := map[string]candidate{}
+	for src, eval := range distancesD2C {
+		for _, dst := range eval {
+			curr, ok := reverse[dst.Word]
+			if !ok {
+				curr = candidate{"", math.MaxInt32}
+			}
+			if dst.Distance < curr.Distance {
+				reverse[dst.Word] = candidate{src, dst.Distance}
+			}
+		}
+	}
+
+	// Sort the reverse index for reproducibility
+	keys := make([]string, 0, len(reverse))
+	for k := range reverse {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	// Traverse the reverse index, populate the up and down match maps and update the source sets.
+	fmt.Printf("WARNING fuzzy match enabled. Double-check the following matches:\n")
+	for _, k := range keys {
+		v := reverse[k]
+		fmt.Printf("%2d %-50s -> %s\n", v.Distance, v.Word, k)
+		upMatches[v.Word] = k
+		downMatches[k] = v.Word
+
+		// Remove matched elements from the two sets.
+		destroy.Remove(v.Word)
+		create.Remove(k)
+	}
+
 	return upMatches, downMatches
 }
 
