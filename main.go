@@ -7,7 +7,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"math"
 	"os"
 	"regexp"
 	"sort"
@@ -229,37 +228,19 @@ func match_fuzzy(create, destroy *strset.Set) (map[string]string, map[string]str
 	downMatches := map[string]string{}
 
 	type candidate struct {
-		Word     string
-		Distance int
+		word     string
+		distance int
 	}
-	distancesD2C := map[string][]candidate{}
+	reverse := map[string]candidate{}
 
 	for _, d := range destroy.List() {
 		for _, c := range create.List() {
 			// Here we could also use a custom NGramSizes via
 			// stringosim.QGramSimilarityOptions
 			dist := stringosim.QGram([]rune(d), []rune(c))
-			distancesD2C[d] = append(distancesD2C[d], candidate{c, dist})
-		}
-	}
-
-	// Sort evaluations from best to worse.
-	for _, eval := range distancesD2C {
-		sort.Slice(eval, func(i, j int) bool {
-			return eval[i].Distance < eval[j].Distance
-		})
-	}
-
-	// Create a reverse index; this is used to resolve ties.
-	reverse := map[string]candidate{}
-	for src, eval := range distancesD2C {
-		for _, dst := range eval {
-			curr, ok := reverse[dst.Word]
-			if !ok {
-				curr = candidate{"", math.MaxInt32}
-			}
-			if dst.Distance < curr.Distance {
-				reverse[dst.Word] = candidate{src, dst.Distance}
+			curr, ok := reverse[c]
+			if !ok || dist < curr.distance {
+				reverse[c] = candidate{d, dist}
 			}
 		}
 	}
@@ -274,12 +255,12 @@ func match_fuzzy(create, destroy *strset.Set) (map[string]string, map[string]str
 	fmt.Printf("WARNING fuzzy match enabled. Double-check the following matches:\n")
 	for _, k := range keys {
 		v := reverse[k]
-		fmt.Printf("%2d %-50s -> %s\n", v.Distance, v.Word, k)
-		upMatches[v.Word] = k
-		downMatches[k] = v.Word
+		fmt.Printf("%2d %-50s -> %s\n", v.distance, v.word, k)
+		upMatches[v.word] = k
+		downMatches[k] = v.word
 
 		// Remove matched elements from the two sets.
-		destroy.Remove(v.Word)
+		destroy.Remove(v.word)
 		create.Remove(k)
 	}
 
