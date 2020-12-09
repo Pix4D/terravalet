@@ -3,12 +3,16 @@ package main
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/diff"
+	"github.com/scylladb/go-set"
+	"github.com/scylladb/go-set/strset"
 )
 
 func TestSuccess(t *testing.T) {
@@ -45,8 +49,9 @@ func TestSuccess(t *testing.T) {
 			tmpDownPath := tmpDir + "/down"
 
 			args := []string{"-plan", tc.planPath, "-up", tmpUpPath, "-down", tmpDownPath}
+
 			if err := run(args); err != nil {
-				t.Fatalf("got error: %v; want: no error", err)
+				t.Fatalf("\ngot:  %q\nwant: no error", err)
 			}
 
 			tmpUp, err := ioutil.ReadFile(tmpUpPath)
@@ -61,12 +66,12 @@ func TestSuccess(t *testing.T) {
 			if !bytes.Equal(tmpUp, wantUp) {
 				var outDiff bytes.Buffer
 				diff.Text("got", tc.wantUpPath, tmpUp, wantUp, &outDiff)
-				t.Errorf("up script: got the following differences:\n%v", outDiff.String())
+				t.Errorf("\nup script: got the following differences:\n%v", outDiff.String())
 			}
 			if !bytes.Equal(tmpDown, wantDown) {
 				var outDiff bytes.Buffer
 				diff.Text("got", tc.wantDownPath, tmpDown, wantDown, &outDiff)
-				t.Errorf("down script: got the following differences:\n%v", outDiff.String())
+				t.Errorf("\ndown script: got the following differences:\n%v", outDiff.String())
 			}
 		})
 	}
@@ -74,57 +79,85 @@ func TestSuccess(t *testing.T) {
 
 func TestFailure(t *testing.T) {
 	testCases := []struct {
-		args      []string
-		wantError string
+		planPath  string
+		wantError error
 	}{
 		{
-			[]string{},
-			"missing value for -plan",
+			"",
+			fmt.Errorf("missing value for -plan"),
 		},
 		{
-			[]string{"-plan=nonexisting", "-up=up", "-down=down"},
-			"opening the terraform plan file: open nonexisting: no such file or directory",
+			"nonexisting",
+			fmt.Errorf("opening the terraform plan file: open nonexisting: no such file or directory"),
+		},
+		{
+			"testdata/02_fuzzy-match.plan.txt",
+			fmt.Errorf(`match_exact:
+unmatched create:
+  aws_route53_record.localhostnames_public["artifactory"]
+  aws_route53_record.loopback["artifactory"]
+  aws_route53_record.private["artifactory"]
+unmatched destroy:
+  aws_route53_record.artifactory
+  aws_route53_record.artifactory_loopback
+  aws_route53_record.artifactory_private`),
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(strings.Join(tc.args, "_"), func(t *testing.T) {
-			err := run(tc.args)
+		t.Run(tc.planPath, func(t *testing.T) {
+			tmpDir, err := ioutil.TempDir("", "terravalet")
+			if err != nil {
+				t.Fatalf("creating temporary dir: %v", err)
+			}
+			defer os.RemoveAll(tmpDir)
+
+			tmpUpPath := tmpDir + "/up"
+			tmpDownPath := tmpDir + "/down"
+
+			args := []string{"-plan", tc.planPath, "-up", tmpUpPath, "-down", tmpDownPath}
+
+			err = run(args)
 
 			if err == nil {
-				t.Fatalf("\ngot:  no error\nwant: %v", tc.wantError)
+				t.Fatalf("\ngot:  no error\nwant: %q", err)
 			}
-			if err.Error() != tc.wantError {
-				t.Fatalf("\ngot:  %v\nwant: %v", err, tc.wantError)
+			if err.Error() != tc.wantError.Error() {
+				t.Fatalf("\ngot:  %q\nwant: %q", err, tc.wantError)
 			}
 		})
 	}
 }
 
+// Used to compare sets.
+var cmpOpt = cmp.Comparer(func(s1, s2 *strset.Set) bool {
+	return s1.IsEqual(s2)
+})
+
 func TestParseSuccess(t *testing.T) {
 	testCases := []struct {
 		description string
 		line        string
-		wantCreate  []string
-		wantDestroy []string
+		wantCreate  *strset.Set
+		wantDestroy *strset.Set
 	}{
 		{
 			"destroyed is recorded",
 			"  # aws_instance.bar will be destroyed",
-			[]string{},
-			[]string{"aws_instance.bar"},
+			set.NewStringSet(),
+			set.NewStringSet("aws_instance.bar"),
 		},
 		{
 			"created is recorded",
 			"  # aws_instance.bar will be created",
-			[]string{"aws_instance.bar"},
-			[]string{},
+			set.NewStringSet("aws_instance.bar"),
+			set.NewStringSet(),
 		},
 		{
 			"read is skipped",
 			"  # data.foo.bar will be read during apply",
-			[]string{},
-			[]string{},
+			set.NewStringSet(),
+			set.NewStringSet(),
 		},
 	}
 
@@ -135,13 +168,13 @@ func TestParseSuccess(t *testing.T) {
 			gotCreate, gotDestroy, err := parse(rd)
 
 			if err != nil {
-				t.Fatalf("\ngot:  %v\nwant: no error", err)
+				t.Fatalf("\ngot:  %q\nwant: no error", err)
 			}
-			if !stringEqual(gotCreate, tc.wantCreate) {
-				t.Errorf("\ngotCreate:  %v\nwantCreate: %v", gotCreate, tc.wantCreate)
+			if diff := cmp.Diff(tc.wantCreate, gotCreate, cmpOpt); diff != "" {
+				t.Errorf("\ncreate: mismatch (-want +got):\n%s", diff)
 			}
-			if !stringEqual(gotDestroy, tc.wantDestroy) {
-				t.Errorf("\ngotDestroy:  %v\nwantDestroy: %v", gotDestroy, tc.wantDestroy)
+			if diff := cmp.Diff(tc.wantDestroy, gotDestroy, cmpOpt); diff != "" {
+				t.Errorf("\ndestroy: mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
@@ -167,23 +200,95 @@ func TestParseFailure(t *testing.T) {
 			_, _, err := parse(rd)
 
 			if err == nil {
-				t.Fatalf("\ngot:  no error\nwant: %v", tc.wantError)
+				t.Fatalf("\ngot:  no error\nwant: %q", tc.wantError)
 			}
 			if err.Error() != tc.wantError.Error() {
-				t.Fatalf("\ngot:  %v\nwant: %v", err, tc.wantError)
+				t.Fatalf("\ngot:  %q\nwant: %q", err, tc.wantError)
 			}
 		})
 	}
 }
 
-func stringEqual(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
+func TestMatchExactZeroUnmatched(t *testing.T) {
+	testCases := []struct {
+		description     string
+		create          *strset.Set
+		destroy         *strset.Set
+		wantUpMatches   map[string]string
+		wantDownMatches map[string]string
+	}{
+		{"increase depth, len 1",
+			set.NewStringSet("a.b"),
+			set.NewStringSet("b"),
+			map[string]string{"b": "a.b"},
+			map[string]string{"a.b": "b"},
+		},
+		{"decrease depth, len 1",
+			set.NewStringSet("b"),
+			set.NewStringSet("a.b"),
+			map[string]string{"a.b": "b"},
+			map[string]string{"b": "a.b"},
+		},
 	}
-	for i, v := range a {
-		if v != b[i] {
-			return false
-		}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			gotUpMatches, gotDownMatches := match_exact(tc.create, tc.destroy)
+
+			if diff := cmp.Diff(tc.wantUpMatches, gotUpMatches); diff != "" {
+				t.Errorf("\nupMatches: mismatch (-want +got):\n%s", diff)
+			}
+			if diff := cmp.Diff(tc.wantDownMatches, gotDownMatches); diff != "" {
+				t.Errorf("\ndownMatches: mismatch (-want +got):\n%s", diff)
+			}
+			if got := tc.create.Size(); got != 0 {
+				t.Errorf("\nsize(create)\ngot: %d\nwant: 0", got)
+			}
+			if got := tc.destroy.Size(); got != 0 {
+				t.Errorf("\nsize(destroy)\ngot: %d\nwant: 0", got)
+			}
+		})
 	}
-	return true
+}
+
+func TestMatchExactSomeUnmatched(t *testing.T) {
+	testCases := []struct {
+		description string
+		create      *strset.Set
+		destroy     *strset.Set
+		wantCreate  *strset.Set
+		wantDestroy *strset.Set
+	}{
+		{"len(create) == len(destroy), no match",
+			set.NewStringSet("a.b"),
+			set.NewStringSet("j.k"),
+			set.NewStringSet("a.b"),
+			set.NewStringSet("j.k"),
+		},
+		{"len(create) > len(destroy), match",
+			set.NewStringSet("a.b", "a.j.k"),
+			set.NewStringSet("j.k"),
+			set.NewStringSet("a.b"),
+			set.NewStringSet(),
+		},
+		{"len(create) < len(destroy), match",
+			set.NewStringSet("a.b"),
+			set.NewStringSet("j.k", "x.a.b"),
+			set.NewStringSet(),
+			set.NewStringSet("j.k"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			match_exact(tc.create, tc.destroy)
+
+			if diff := cmp.Diff(tc.wantCreate, tc.create, cmpOpt); diff != "" {
+				t.Errorf("\nUnmatched create: (-want +got):\n%s", diff)
+			}
+			if diff := cmp.Diff(tc.wantDestroy, tc.destroy, cmpOpt); diff != "" {
+				t.Errorf("\nUnmatched destroy (-want +got):\n%s", diff)
+			}
+		})
+	}
 }

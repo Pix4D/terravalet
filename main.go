@@ -13,6 +13,8 @@ import (
 	"strings"
 
 	"github.com/integrii/flaggy"
+	"github.com/scylladb/go-set"
+	"github.com/scylladb/go-set/strset"
 )
 
 var (
@@ -77,9 +79,20 @@ func run(args []string) error {
 		return fmt.Errorf("parse: %v", err)
 	}
 
-	upMatches, downMatches, err := match(create, destroy)
-	if err != nil {
-		return fmt.Errorf("match: %v", err)
+	upMatches, downMatches := match_exact(create, destroy)
+	msg := ""
+	if create.Size() != 0 {
+		elems := create.List()
+		sort.Strings(elems)
+		msg += "\nunmatched create:\n  " + strings.Join(elems, "\n  ")
+	}
+	if destroy.Size() != 0 {
+		elems := destroy.List()
+		sort.Strings(elems)
+		msg += "\nunmatched destroy:\n  " + strings.Join(elems, "\n  ")
+	}
+	if msg != "" {
+		return fmt.Errorf("match_exact:%v", msg)
 	}
 
 	if err := script(upMatches, localStatePath, upFile); err != nil {
@@ -93,19 +106,20 @@ func run(args []string) error {
 	return nil
 }
 
-// Parse the output of "terraform plan" and return a list of elements to be created and a
-// list of elements to be destroyed. The two lists are unordered.
+// Parse the output of "terraform plan" and return two sets, the first a set of elements
+// to be created and the second a set of elements to be destroyed. The two sets are
+// unordered.
 //
 // For example:
 // " # module.ci.aws_instance.docker will be destroyed"
 // " # aws_instance.docker will be created"
 // " # module.ci.module.workers["windows-vs2019"].aws_autoscaling_schedule.night_mode will be destroyed"
 // " # module.workers["windows-vs2019"].aws_autoscaling_schedule.night_mode will be created"
-func parse(rd io.Reader) ([]string, []string, error) {
+func parse(rd io.Reader) (*strset.Set, *strset.Set, error) {
 	var re = regexp.MustCompile(`# (.+) will be (.+)`)
 
-	var create []string
-	var destroy []string
+	create := set.NewStringSet()
+	destroy := set.NewStringSet()
 
 	scanner := bufio.NewScanner(rd)
 	for scanner.Scan() {
@@ -117,9 +131,9 @@ func parse(rd io.Reader) ([]string, []string, error) {
 			}
 			switch m[2] {
 			case "created":
-				create = append(create, m[1])
+				create.Add(m[1])
 			case "destroyed":
-				destroy = append(destroy, m[1])
+				destroy.Add(m[1])
 			case "read during apply":
 				// do nothing
 			default:
@@ -136,12 +150,14 @@ func parse(rd io.Reader) ([]string, []string, error) {
 	return create, destroy, nil
 }
 
-// Given two unordered lists create and destroy, return a map that matches each old
-// element in destroy to the corresponding new element in create.
-// The criterium used to perform a match is that one of the two elements must be a
+// Given two unordered sets create and destroy, return two maps, the first that matches
+// each old element in destroy to the corresponding new element in create (up), the
+// second that matches in the opposite direction (down).
+// Modify the two input sets so that they contain only the remaining (if any) unmatched elements.
+// The criterium used to perform a match_exact is that one of the two elements must be a
 // prefix of the other. Note that the longest element could be the old or the new one,
-// it depends.
-func match(create, destroy []string) (map[string]string, map[string]string, error) {
+// it depends on the inputs.
+func match_exact(create, destroy *strset.Set) (map[string]string, map[string]string) {
 	// old -> new (or equvalenty: destroy -> create)
 	upMatches := map[string]string{}
 	downMatches := map[string]string{}
@@ -153,16 +169,20 @@ func match(create, destroy []string) (map[string]string, map[string]string, erro
 	// 	    terraform state mv module.ci.aws_instance.docker           aws_instance.docker
 	//      terraform state mv           aws_instance.docker module.ci.aws_instance.docker
 
-	for _, d := range destroy {
-		for _, c := range create {
+	for _, d := range destroy.List() {
+		for _, c := range create.List() {
 			if strings.HasSuffix(c, d) || strings.HasSuffix(d, c) {
 				upMatches[d] = c
 				downMatches[c] = d
-				break
+				// Remove matched elements from the two sets.
+				destroy.Remove(d)
+				create.Remove(c)
 			}
 		}
 	}
-	return upMatches, downMatches, nil
+
+	// Now the two sets create, destroy contain only unmatched elements.
+	return upMatches, downMatches
 }
 
 // Given a map old->new, create a script that for each element in the map issues the

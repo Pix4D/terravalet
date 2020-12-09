@@ -1,0 +1,6 @@
+  # aws_route53_record.artifactory will be destroyed
+  # aws_route53_record.artifactory_loopback will be destroyed
+  # aws_route53_record.artifactory_private will be destroyed
+  # aws_route53_record.private["artifactory"] will be created
+  # aws_route53_record.loopback["artifactory"] will be created
+  # aws_route53_record.localhostnames_public["artifactory"] will be created
