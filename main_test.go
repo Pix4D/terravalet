@@ -17,19 +17,37 @@ import (
 
 func TestSuccess(t *testing.T) {
 	testCases := []struct {
+		description  string
+		options      []string
 		planPath     string
 		wantUpPath   string
 		wantDownPath string
 	}{
 		{
+			"exact match",
+			[]string{},
 			"testdata/01_exact-match.plan.txt",
 			"testdata/01_exact-match.up.sh",
 			"testdata/01_exact-match.down.sh",
 		},
+		{
+			"q-gram fuzzy match simple",
+			[]string{"-fuzzy-match"},
+			"testdata/02_fuzzy-match.plan.txt",
+			"testdata/02_fuzzy-match.up.sh",
+			"testdata/02_fuzzy-match.down.sh",
+		},
+		{
+			"q-gram fuzzy match complicated",
+			[]string{"-fuzzy-match"},
+			"testdata/03_fuzzy-match.plan.txt",
+			"testdata/03_fuzzy-match.up.sh",
+			"testdata/03_fuzzy-match.down.sh",
+		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.planPath, func(t *testing.T) {
+		t.Run(tc.description, func(t *testing.T) {
 			wantUp, err := ioutil.ReadFile(tc.wantUpPath)
 			if err != nil {
 				t.Fatalf("reading want up file: %v", err)
@@ -49,6 +67,7 @@ func TestSuccess(t *testing.T) {
 			tmpDownPath := tmpDir + "/down"
 
 			args := []string{"-plan", tc.planPath, "-up", tmpUpPath, "-down", tmpDownPath}
+			args = append(args, tc.options...)
 
 			if err := run(args); err != nil {
 				t.Fatalf("\ngot:  %q\nwant: no error", err)
@@ -92,7 +111,7 @@ func TestFailure(t *testing.T) {
 		},
 		{
 			"testdata/02_fuzzy-match.plan.txt",
-			fmt.Errorf(`match_exact:
+			fmt.Errorf(`matchExact:
 unmatched create:
   aws_route53_record.localhostnames_public["artifactory"]
   aws_route53_record.loopback["artifactory"]
@@ -233,7 +252,7 @@ func TestMatchExactZeroUnmatched(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			gotUpMatches, gotDownMatches := match_exact(tc.create, tc.destroy)
+			gotUpMatches, gotDownMatches := matchExact(tc.create, tc.destroy)
 
 			if diff := cmp.Diff(tc.wantUpMatches, gotUpMatches); diff != "" {
 				t.Errorf("\nupMatches: mismatch (-want +got):\n%s", diff)
@@ -242,10 +261,10 @@ func TestMatchExactZeroUnmatched(t *testing.T) {
 				t.Errorf("\ndownMatches: mismatch (-want +got):\n%s", diff)
 			}
 			if got := tc.create.Size(); got != 0 {
-				t.Errorf("\nsize(create)\ngot: %d\nwant: 0", got)
+				t.Errorf("\nsize(create): got: %d; want: 0", got)
 			}
 			if got := tc.destroy.Size(); got != 0 {
-				t.Errorf("\nsize(destroy)\ngot: %d\nwant: 0", got)
+				t.Errorf("\nsize(destroy): got: %d; want: 0", got)
 			}
 		})
 	}
@@ -281,13 +300,68 @@ func TestMatchExactSomeUnmatched(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			match_exact(tc.create, tc.destroy)
+			matchExact(tc.create, tc.destroy)
 
 			if diff := cmp.Diff(tc.wantCreate, tc.create, cmpOpt); diff != "" {
 				t.Errorf("\nUnmatched create: (-want +got):\n%s", diff)
 			}
 			if diff := cmp.Diff(tc.wantDestroy, tc.destroy, cmpOpt); diff != "" {
 				t.Errorf("\nUnmatched destroy (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestMatchFuzzyZeroUnmatched(t *testing.T) {
+	testCases := []struct {
+		description     string
+		create          *strset.Set
+		destroy         *strset.Set
+		wantUpMatches   map[string]string
+		wantDownMatches map[string]string
+	}{
+		{"1 fuzzy match",
+			set.NewStringSet(`foo.loopback["bar"]`),
+			set.NewStringSet(`foo.bar_loopback`),
+			map[string]string{`foo.bar_loopback`: `foo.loopback["bar"]`},
+			map[string]string{`foo.loopback["bar"]`: `foo.bar_loopback`},
+		},
+		{"3 fuzzy matches",
+			set.NewStringSet(
+				`foo.loopback["bar"]`,
+				`foo.private["bar"]`,
+				`foo.public["bar"]`),
+			set.NewStringSet(
+				`foo.bar_loopback`,
+				`foo.bar_private`,
+				`foo.bar`),
+			map[string]string{
+				`foo.bar_loopback`: `foo.loopback["bar"]`,
+				`foo.bar_private`:  `foo.private["bar"]`,
+				`foo.bar`:          `foo.public["bar"]`},
+			map[string]string{
+				`foo.loopback["bar"]`: `foo.bar_loopback`,
+				`foo.private["bar"]`:  `foo.bar_private`,
+				`foo.public["bar"]`:   `foo.bar`},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+
+			gotUpMatches, gotDownMatches := matchFuzzy(tc.create, tc.destroy)
+
+			if diff := cmp.Diff(tc.wantUpMatches, gotUpMatches); diff != "" {
+				t.Errorf("\nupMatches: mismatch (-want +got):\n%s", diff)
+			}
+			if diff := cmp.Diff(tc.wantDownMatches, gotDownMatches); diff != "" {
+				t.Errorf("\ndownMatches: mismatch (-want +got):\n%s", diff)
+			}
+			if got := tc.create.Size(); got != 0 {
+				t.Errorf("\nsize(create): got: %d; want: 0", got)
+			}
+			if got := tc.destroy.Size(); got != 0 {
+				t.Errorf("\nsize(destroy): got: %d; want: 0", got)
 			}
 		})
 	}

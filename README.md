@@ -14,21 +14,50 @@ The API can change in breaking ways until we reach v1.0.0
 
 ## Usage
 
-Collect informations for Terravalet:
+### Collect information
 
 ```
 $ cd $ROOT_MODULE_DIR
 $ terraform plan -no-color 2>&1 | tee plan-01.txt
 ```
 
+### Exact match, success
+
 Take as input the Terraform plan `plan-01.txt` and generate UP and DOWN migration scripts:
 
 ```
-$ terravalet -plan=plan-01.txt \
-    -up=../migrations/001_TITLE.up.sh -down=../migrations/001_TITLE.down.sh
+$ terravalet \
+    -plan plan-01.txt -up 001_TITLE.up.sh -down 001_TITLE.down.sh
 ```
 
 NOTE: It us up to the user to ensure that the migration number is correct with respect to what is already present in the migration directory.
+
+### Exact match, failure
+
+Depending on _how_ the elements have been renamed in the Terraform configuration, it is possible that the exact match will fail:
+
+```
+$ terravalet \
+    -plan plan-01.txt -up 001_TITLE.up.sh -down 001_TITLE.down.sh
+match_exact:
+unmatched create:
+  aws_route53_record.private["foo"]
+unmatched destroy:
+  aws_route53_record.foo_private
+```
+
+### Fuzzy match
+
+**WARNING** Fuzzy match can make mistakes. It is up to you to validate that the migration makes sense
+
+If exact match failed, it is possible to enable [q-gram distance](https://github.com/dexyk/stringosim) fuzzy matching with the `-fuzzy-match` flag:
+
+```
+$ terravalet -fuzzy-match \
+    -plan plan-01.txt -up 001_TITLE.up.sh -down 001_TITLE.down.sh
+WARNING fuzzy match enabled. Double-check the following matches:
+ 9 aws_route53_record.foo_private -> aws_route53_record.private["foo"]
+```
 
 ## Install
 
