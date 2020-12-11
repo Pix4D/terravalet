@@ -26,7 +26,7 @@ var (
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 }
@@ -83,21 +83,21 @@ func run(args []string) error {
 		return fmt.Errorf("parse: %v", err)
 	}
 
-	upMatches, downMatches := match_exact(create, destroy)
+	upMatches, downMatches := matchExact(create, destroy)
 
 	msg := collectErrors(create, destroy)
 	if msg != "" && !fuzzyMatch {
-		return fmt.Errorf("match_exact:%v", msg)
+		return fmt.Errorf("matchExact:%v", msg)
 	}
 
 	if fuzzyMatch && create.Size() == 0 && destroy.Size() == 0 {
-		return fmt.Errorf("required fuzzy-match but there is nothing to fuzzy")
+		return fmt.Errorf("required fuzzy-match but there is nothing left to match")
 	}
 	if fuzzyMatch {
-		upMatches, downMatches = match_fuzzy(create, destroy)
+		upMatches, downMatches = matchFuzzy(create, destroy)
 		msg := collectErrors(create, destroy)
 		if msg != "" {
-			return fmt.Errorf("match_fuzzy:%v", msg)
+			return fmt.Errorf("matchFuzzy: %v", msg)
 		}
 	}
 
@@ -179,10 +179,10 @@ func parse(rd io.Reader) (*strset.Set, *strset.Set, error) {
 //
 // Modify the two input sets so that they contain only the remaining (if any) unmatched elements.
 //
-// The criterium used to perform a match_exact is that one of the two elements must be a
+// The criterium used to perform a matchExact is that one of the two elements must be a
 // prefix of the other.
 // Note that the longest element could be the old or the new one, it depends on the inputs.
-func match_exact(create, destroy *strset.Set) (map[string]string, map[string]string) {
+func matchExact(create, destroy *strset.Set) (map[string]string, map[string]string) {
 	// old -> new (or equvalenty: destroy -> create)
 	upMatches := map[string]string{}
 	downMatches := map[string]string{}
@@ -211,7 +211,7 @@ func match_exact(create, destroy *strset.Set) (map[string]string, map[string]str
 }
 
 // Given two unordered sets create and destroy, that have already been processed by
-// match_exact(), perform a fuzzy match from destroy to create.
+// matchExact(), perform a fuzzy match from destroy to create.
 //
 // Return two maps, the first that fuzzy matches each old element in destroy to the
 // corresponding  new element in create (up), the second that matches in the opposite
@@ -219,10 +219,10 @@ func match_exact(create, destroy *strset.Set) (map[string]string, map[string]str
 //
 // Modify the two input sets so that they contain only the remaining (if any) unmatched elements.
 //
-// The criterium used to perform a match_fuzzy is that one of the two elements must be a
+// The criterium used to perform a matchFuzzy is that one of the two elements must be a
 // fuzzy match of the other, according to some definition of fuzzy.
 // Note that the longest element could be the old or the new one, it depends on the inputs.
-func match_fuzzy(create, destroy *strset.Set) (map[string]string, map[string]string) {
+func matchFuzzy(create, destroy *strset.Set) (map[string]string, map[string]string) {
 	// old -> new (or equvalenty: destroy -> create)
 	upMatches := map[string]string{}
 	downMatches := map[string]string{}
