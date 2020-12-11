@@ -233,8 +233,13 @@ func matchFuzzy(create, destroy *strset.Set) (map[string]string, map[string]stri
 	}
 	reverse := map[string]candidate{}
 
-	for _, d := range destroy.List() {
-		for _, c := range create.List() {
+	destroyL := destroy.List()
+	sort.Strings(destroyL)
+	createL := create.List()
+	sort.Strings(createL)
+
+	for _, d := range destroyL {
+		for _, c := range createL {
 			// Here we could also use a custom NGramSizes via
 			// stringosim.QGramSimilarityOptions
 			dist := stringosim.QGram([]rune(d), []rune(c))
