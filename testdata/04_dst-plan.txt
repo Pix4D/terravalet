@@ -1,0 +1,11 @@
+An execution plan has been generated and is shown below.
+Resource actions are indicated with the following symbols:
+  + create
+
+Terraform will perform the following actions:
+
+  # aws_batch_compute_environment.foo_batch will be created
+
+  # aws_batch_job_definition.foo will be created
+
+  # aws_batch_job_queue.foo will be created

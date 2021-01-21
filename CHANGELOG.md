@@ -5,18 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased [v0.4.0] - (2021-XX-XX)
+## Unreleased
+### Fixes
+### Breaking changes
+### Changes
+### New
+
+## Unreleased [v0.4.0] - (2021-01-XX)
+
 ### Fixes
 
 ### Breaking changes
 
-- The CLI API has changed; now it must be invoked by specifying the subcommand:
-  ```
-  $ terravalet rename -plan=PLAN -up=UP.sh -down=DOWN.sh
-  ```
+- Due to the introduction of subcommands, the CLI API has changed; now it must be invoked by specifying a subcommand. See section New for details.
 
 ### Changes
+
 ### New
+
+- Introduction of subcommands.
+- Subcommand `rename` (existing functionality):
+  ```
+  rename - Rename resources in the same tf root environment
+
+    Flags:
+         --plan          Path to the terraform plan.
+         --fuzzy-match   Enable q-gram distance fuzzy matching.
+         --up            Path to the up migration script to generate
+         --down          Path to the down migration script to generate
+  ```
+- Subcommand `move` (new functionality):
+  ```
+  move - Move resources from one root environment to another
+
+    Flags:
+         --src-plan    Path to the SRC terraform plan
+         --dst-plan    Path to the DST terraform plan
+         --src-state   Path to the SRC local state to modify
+         --dst-state   Path to the DST local state to modify
+         --up          Path to the up migration script to generate
+         --down        Path to the down migration script to generate
+  ```
 
 ## [v0.3.0] - (2020-12-11)
 
@@ -60,3 +89,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [v0.1.0]: https://github.com/Pix4D/terravalet/releases/tag/v0.1.0
 [v0.2.0]: https://github.com/Pix4D/terravalet/releases/tag/v0.2.0
 [v0.3.0]: https://github.com/Pix4D/terravalet/releases/tag/v0.3.0
+[v0.4.0]: https://github.com/Pix4D/terravalet/releases/tag/v0.4.0
