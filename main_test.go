@@ -66,7 +66,7 @@ func TestSuccess(t *testing.T) {
 			tmpUpPath := tmpDir + "/up"
 			tmpDownPath := tmpDir + "/down"
 
-			args := []string{"-plan", tc.planPath, "-up", tmpUpPath, "-down", tmpDownPath}
+			args := []string{"rename", "-plan", tc.planPath, "-up", tmpUpPath, "-down", tmpDownPath}
 			args = append(args, tc.options...)
 
 			if err := run(args); err != nil {
@@ -134,7 +134,7 @@ unmatched destroy:
 			tmpUpPath := tmpDir + "/up"
 			tmpDownPath := tmpDir + "/down"
 
-			args := []string{"-plan", tc.planPath, "-up", tmpUpPath, "-down", tmpDownPath}
+			args := []string{"rename", "-plan", tc.planPath, "-up", tmpUpPath, "-down", tmpDownPath}
 
 			err = run(args)
 
