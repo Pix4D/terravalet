@@ -5,6 +5,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -32,24 +33,50 @@ func main() {
 }
 
 func run(args []string) error {
-	planPath := ""
+	flaggy.ResetParser() // flaggy keeps gobal state; workaround for testing :-(
+	flaggy.SetDescription("A simple valet for terraform operations")
+	flaggy.SetVersion(fullVersion)
+
+	// Global flags
 	upPath := ""
 	downPath := ""
+	flaggy.String(&upPath, "", "up", "Path to the up migration script to generate (NNN_TITLE.up.sh).")
+	flaggy.String(&downPath, "", "down", "Path to the down migration script to generate (NNN_TITLE.down.sh).")
+
+	// Setup the "rename" subcommand
+
+	renameCmd := flaggy.NewSubcommand("rename")
+	renameCmd.Description = "Rename resources in the same tf root environment"
+	flaggy.AttachSubcommand(renameCmd, 1)
+
+	planPath := ""
 	localStatePath := "local.tfstate"
 	fuzzyMatch := false
 
-	flaggy.ResetParser() // flaggy keeps gobal state; workaround for testing :-(
-	flaggy.SetDescription("A simple valet for terraform operations (WIP).")
-	flaggy.String(&planPath, "", "plan", "Path to the output of terraform plan.")
-	flaggy.String(&upPath, "", "up", "Path to the up migration script to generate (NNN_TITLE.up.sh).")
-	flaggy.String(&downPath, "", "down", "Path to the down migration script to generate (NNN_TITLE.down.sh).")
-	flaggy.String(&localStatePath, "", "local-state", "Path to the local state to modify (both src and dst).")
-	flaggy.Bool(&fuzzyMatch, "", "fuzzy-match",
+	renameCmd.String(&planPath, "", "plan", "Path to the output of terraform plan.")
+	renameCmd.String(&localStatePath, "", "local-state", "Path to the local state to modify (both src and dst).")
+	renameCmd.Bool(&fuzzyMatch, "", "fuzzy-match",
 		"Enable q-gram distance fuzzy matching. WARNING: You must validate by hand the output!")
 
-	flaggy.SetVersion(fullVersion)
+	// Setup the "move" subcommand
+
+	moveCmd := flaggy.NewSubcommand("move")
+	moveCmd.Description = "Move resources from one root environment to another (UNIMPLEMENTED)"
+	flaggy.AttachSubcommand(moveCmd, 1)
+
 	flaggy.ParseArgs(args) // This might call os.Exit() :-/
 
+	switch {
+	case renameCmd.Used:
+		return rename(upPath, downPath, planPath, localStatePath, fuzzyMatch)
+	case moveCmd.Used:
+		return move()
+	default:
+		return fmt.Errorf("missing subcommand")
+	}
+}
+
+func rename(upPath, downPath, planPath, localStatePath string, fuzzyMatch bool) error {
 	if planPath == "" {
 		return fmt.Errorf("missing value for -plan")
 	}
@@ -110,6 +137,10 @@ func run(args []string) error {
 	}
 
 	return nil
+}
+
+func move() error {
+	return errors.New("unimplemented")
 }
 
 func collectErrors(create *strset.Set, destroy *strset.Set) string {
