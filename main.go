@@ -5,7 +5,6 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -53,7 +52,7 @@ func run(args []string) error {
 	localStatePath := "local.tfstate"
 	fuzzyMatch := false
 
-	renameCmd.String(&planPath, "", "plan", "Path to the output of terraform plan.")
+	renameCmd.String(&planPath, "", "plan", "Path to the terraform plan.")
 	renameCmd.String(&localStatePath, "", "local-state", "Path to the local state to modify (both src and dst).")
 	renameCmd.Bool(&fuzzyMatch, "", "fuzzy-match",
 		"Enable q-gram distance fuzzy matching. WARNING: You must validate by hand the output!")
@@ -61,8 +60,20 @@ func run(args []string) error {
 	// Setup the "move" subcommand
 
 	moveCmd := flaggy.NewSubcommand("move")
-	moveCmd.Description = "Move resources from one root environment to another (UNIMPLEMENTED)"
+	moveCmd.Description = "Move resources from one root environment to another"
 	flaggy.AttachSubcommand(moveCmd, 1)
+
+	srcPlanPath := ""
+	dstPlanPath := ""
+	srcStatePath := ""
+	dstStatePath := ""
+
+	moveCmd.String(&srcPlanPath, "", "src-plan", "Path to the SRC terraform plan")
+	moveCmd.String(&dstPlanPath, "", "dst-plan", "Path to the DST terraform plan")
+	moveCmd.String(&srcStatePath, "", "src-state", "Path to the SRC local state to modify")
+	moveCmd.String(&dstStatePath, "", "dst-state", "Path to the DST local state to modify")
+
+	//
 
 	flaggy.ParseArgs(args) // This might call os.Exit() :-/
 
@@ -70,7 +81,7 @@ func run(args []string) error {
 	case renameCmd.Used:
 		return rename(upPath, downPath, planPath, localStatePath, fuzzyMatch)
 	case moveCmd.Used:
-		return move()
+		return move(upPath, downPath, srcPlanPath, dstPlanPath, srcStatePath, dstStatePath)
 	default:
 		return fmt.Errorf("missing subcommand")
 	}
@@ -128,19 +139,99 @@ func rename(upPath, downPath, planPath, localStatePath string, fuzzyMatch bool) 
 		}
 	}
 
-	if err := script(upMatches, localStatePath, upFile); err != nil {
+	stateFlags := "-state=" + localStatePath
+
+	if err := script(upMatches, stateFlags, upFile); err != nil {
 		return fmt.Errorf("writing the up script: %v", err)
 	}
-
-	if err := script(downMatches, localStatePath, downFile); err != nil {
+	if err := script(downMatches, stateFlags, downFile); err != nil {
 		return fmt.Errorf("writing the down script: %v", err)
 	}
 
 	return nil
 }
 
-func move() error {
-	return errors.New("unimplemented")
+func move(upPath, downPath, srcPlanPath, dstPlanPath, srcStatePath, dstStatePath string) error {
+	// We need to read srcPlanPath and dstPlanPath, while we treat as opaque
+	// srcStatePath and dstStatePath
+
+	if srcPlanPath == "" {
+		return fmt.Errorf("missing value for -src-plan")
+	}
+	if dstPlanPath == "" {
+		return fmt.Errorf("missing value for -dst-plan")
+	}
+	if srcStatePath == "" {
+		return fmt.Errorf("missing value for -src-state")
+	}
+	if dstStatePath == "" {
+		return fmt.Errorf("missing value for -dst-state")
+	}
+	if upPath == "" {
+		return fmt.Errorf("missing value for -up")
+	}
+	if downPath == "" {
+		return fmt.Errorf("missing value for -down")
+	}
+
+	srcPlanFile, err := os.Open(srcPlanPath)
+	if err != nil {
+		return fmt.Errorf("opening the terraform plan file: %v", err)
+	}
+	defer srcPlanFile.Close()
+
+	dstPlanFile, err := os.Open(dstPlanPath)
+	if err != nil {
+		return fmt.Errorf("opening the terraform plan file: %v", err)
+	}
+	defer dstPlanFile.Close()
+
+	upFile, err := os.Create(upPath)
+	if err != nil {
+		return fmt.Errorf("creating the up file: %v", err)
+	}
+	defer upFile.Close()
+
+	downFile, err := os.Create(downPath)
+	if err != nil {
+		return fmt.Errorf("creating the down file: %v", err)
+	}
+	defer downFile.Close()
+
+	srcCreate, srcDestroy, err := parse(srcPlanFile)
+	if err != nil {
+		return fmt.Errorf("parse src-plan: %v", err)
+	}
+	if srcCreate.Size() > 0 {
+		return fmt.Errorf("src-plan contains resources to create: %v", srcCreate.List())
+	}
+
+	dstCreate, dstDestroy, err := parse(dstPlanFile)
+	if err != nil {
+		return fmt.Errorf("parse dst-plan: %v", err)
+	}
+	if dstDestroy.Size() > 0 {
+		return fmt.Errorf("dst-plan contains resources to destroy: %v", dstDestroy.List())
+	}
+
+	upMatches, downMatches := matchExact(dstCreate, srcDestroy)
+
+	msg := collectErrors(dstCreate, srcDestroy)
+	if msg != "" {
+		return fmt.Errorf("matchExact:%v", msg)
+	}
+
+	upStateFlags := fmt.Sprintf("-state=%s -state-out=%s", srcStatePath, dstStatePath)
+	downStateFlags := fmt.Sprintf("-state=%s -state-out=%s", dstStatePath, srcStatePath)
+
+	if err := script(upMatches, upStateFlags, upFile); err != nil {
+		return fmt.Errorf("writing the up script: %v", err)
+	}
+	if err := script(downMatches, downStateFlags, downFile); err != nil {
+		return fmt.Errorf("writing the down script: %v", err)
+	}
+
+	return nil
 }
 
 func collectErrors(create *strset.Set, destroy *strset.Set) string {
@@ -305,7 +396,7 @@ func matchFuzzy(create, destroy *strset.Set) (map[string]string, map[string]stri
 
 // Given a map old->new, create a script that for each element in the map issues the
 // command: "terraform state mv old new".
-func script(matches map[string]string, statePath string, out io.Writer) error {
+func script(matches map[string]string, stateFlags string, out io.Writer) error {
 	fmt.Fprintf(out, "#! /usr/bin/sh\n")
 	fmt.Fprintf(out, "# DO NOT EDIT. Generated by terravalet.\n")
 	fmt.Fprintf(out, "# terravalet_output_format=2\n")
@@ -316,7 +407,7 @@ func script(matches map[string]string, statePath string, out io.Writer) error {
 	// -lock=false greatly speeds up operations when the state has many elements
 	// and is safe as long as we use -state=FILE, since this keeps operations
 	// strictly local, without considering the configured backend.
-	cmd := fmt.Sprintf("terraform state mv -lock=false -state=%s", statePath)
+	cmd := fmt.Sprintf("terraform state mv -lock=false %s", stateFlags)
 
 	// Go maps are unordered. We want instead a stable iteration order, to make it
 	// possible to compare scripts.

@@ -15,7 +15,7 @@ import (
 	"github.com/scylladb/go-set/strset"
 )
 
-func TestSuccess(t *testing.T) {
+func TestRunRenameSuccess(t *testing.T) {
 	testCases := []struct {
 		description  string
 		options      []string
@@ -48,68 +48,29 @@ func TestSuccess(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			wantUp, err := ioutil.ReadFile(tc.wantUpPath)
-			if err != nil {
-				t.Fatalf("reading want up file: %v", err)
-			}
-			wantDown, err := ioutil.ReadFile(tc.wantDownPath)
-			if err != nil {
-				t.Fatalf("reading want down file: %v", err)
-			}
-
-			tmpDir, err := ioutil.TempDir("", "terravalet")
-			if err != nil {
-				t.Fatalf("creating temporary dir: %v", err)
-			}
-			defer os.RemoveAll(tmpDir)
-
-			tmpUpPath := tmpDir + "/up"
-			tmpDownPath := tmpDir + "/down"
-
-			args := []string{"rename", "-plan", tc.planPath, "-up", tmpUpPath, "-down", tmpDownPath}
+			args := []string{"rename", "-plan", tc.planPath}
 			args = append(args, tc.options...)
 
-			if err := run(args); err != nil {
-				t.Fatalf("\ngot:  %q\nwant: no error", err)
-			}
-
-			tmpUp, err := ioutil.ReadFile(tmpUpPath)
-			if err != nil {
-				t.Fatalf("reading tmp up file: %v", err)
-			}
-			tmpDown, err := ioutil.ReadFile(tmpDownPath)
-			if err != nil {
-				t.Fatalf("reading tmp down file: %v", err)
-			}
-
-			if !bytes.Equal(tmpUp, wantUp) {
-				var outDiff bytes.Buffer
-				diff.Text("got", tc.wantUpPath, tmpUp, wantUp, &outDiff)
-				t.Errorf("\nup script: got the following differences:\n%v", outDiff.String())
-			}
-			if !bytes.Equal(tmpDown, wantDown) {
-				var outDiff bytes.Buffer
-				diff.Text("got", tc.wantDownPath, tmpDown, wantDown, &outDiff)
-				t.Errorf("\ndown script: got the following differences:\n%v", outDiff.String())
-			}
+			runSuccess(t, args, tc.wantUpPath, tc.wantDownPath)
 		})
 	}
 }
 
-func TestFailure(t *testing.T) {
+func TestRunRenameFailure(t *testing.T) {
 	testCases := []struct {
-		planPath  string
-		wantError error
+		description string
+		planPath    string
+		wantError   error
 	}{
-		{
+		{"missing -plan flag",
 			"",
 			fmt.Errorf("missing value for -plan"),
 		},
-		{
+		{"plan file doesn't exist",
 			"nonexisting",
 			fmt.Errorf("opening the terraform plan file: open nonexisting: no such file or directory"),
 		},
-		{
+		{"matchExact failure",
 			"testdata/02_fuzzy-match.plan.txt",
 			fmt.Errorf(`matchExact:
 unmatched create:
@@ -124,27 +85,154 @@ unmatched destroy:
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.planPath, func(t *testing.T) {
-			tmpDir, err := ioutil.TempDir("", "terravalet")
-			if err != nil {
-				t.Fatalf("creating temporary dir: %v", err)
-			}
-			defer os.RemoveAll(tmpDir)
+		t.Run(tc.description, func(t *testing.T) {
+			args := []string{"rename", "-plan", tc.planPath}
 
-			tmpUpPath := tmpDir + "/up"
-			tmpDownPath := tmpDir + "/down"
-
-			args := []string{"rename", "-plan", tc.planPath, "-up", tmpUpPath, "-down", tmpDownPath}
-
-			err = run(args)
-
-			if err == nil {
-				t.Fatalf("\ngot:  no error\nwant: %q", err)
-			}
-			if err.Error() != tc.wantError.Error() {
-				t.Fatalf("\ngot:  %q\nwant: %q", err, tc.wantError)
-			}
+			runFailure(t, args, tc.wantError)
 		})
+	}
+}
+
+func TestRunMoveSuccess(t *testing.T) {
+	testCases := []struct {
+		description  string
+		srcPlanPath  string
+		dstPlanPath  string
+		wantUpPath   string
+		wantDownPath string
+	}{
+		{
+			"exact match",
+			"testdata/04_src-plan.txt",
+			"testdata/04_dst-plan.txt",
+			"testdata/04_up.sh",
+			"testdata/04_down.sh",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			args := []string{"move",
+				"-src-plan", tc.srcPlanPath, "-dst-plan", tc.dstPlanPath,
+				"-src-state", "src-dummy", "-dst-state", "dst-dummy",
+			}
+			// args = append(args, tc.options...)
+
+			runSuccess(t, args, tc.wantUpPath, tc.wantDownPath)
+		})
+	}
+}
+
+func TestRunMoveFailure(t *testing.T) {
+	testCases := []struct {
+		description  string
+		srcPlanPath  string
+		dstPlanPath  string
+		wantUpPath   string
+		wantDownPath string
+		wantError    error
+	}{
+		{"non existing src-plan",
+			"src-plan-path-dummy",
+			"dst-plan-path-dummy",
+			"want-up-path-dummy",
+			"want-down-path-dummy",
+			fmt.Errorf("opening the terraform plan file: open src-plan-path-dummy: no such file or directory"),
+		},
+		{"src-plan must only destroy",
+			"testdata/05_src-plan.txt",
+			"testdata/05_dst-plan.txt",
+			"want-up-path-dummy",
+			"want-down-path-dummy",
+			fmt.Errorf("src-plan contains resources to create: [aws_batch_job_definition.foo]"),
+		},
+		{"dst-plan must only create",
+			"testdata/06_src-plan.txt",
+			"testdata/06_dst-plan.txt",
+			"want-up-path-dummy",
+			"want-down-path-dummy",
+			fmt.Errorf("dst-plan contains resources to destroy: [aws_batch_job_definition.foo]"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			args := []string{"move",
+				"-src-plan", tc.srcPlanPath, "-dst-plan", tc.dstPlanPath,
+				"-src-state", "src-dummy", "-dst-state", "dst-dummy",
+			}
+			// args = append(args, tc.options...)
+
+			runFailure(t, args, tc.wantError)
+		})
+	}
+}
+
+func runSuccess(t *testing.T, args []string, wantUpPath string, wantDownPath string) {
+	wantUp, err := ioutil.ReadFile(wantUpPath)
+	if err != nil {
+		t.Fatalf("reading want up file: %v", err)
+	}
+	wantDown, err := ioutil.ReadFile(wantDownPath)
+	if err != nil {
+		t.Fatalf("reading want down file: %v", err)
+	}
+
+	tmpDir, err := ioutil.TempDir("", "terravalet")
+	if err != nil {
+		t.Fatalf("creating temporary dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	tmpUpPath := tmpDir + "/up"
+	tmpDownPath := tmpDir + "/down"
+
+	args = append(args, "-up", tmpUpPath, "-down", tmpDownPath)
+
+	if err := run(args); err != nil {
+		t.Fatalf("\ngot:  %q\nwant: no error", err)
+	}
+
+	tmpUp, err := ioutil.ReadFile(tmpUpPath)
+	if err != nil {
+		t.Fatalf("reading tmp up file: %v", err)
+	}
+	tmpDown, err := ioutil.ReadFile(tmpDownPath)
+	if err != nil {
+		t.Fatalf("reading tmp down file: %v", err)
+	}
+
+	if !bytes.Equal(tmpUp, wantUp) {
+		var outDiff bytes.Buffer
+		diff.Text("got", wantUpPath, tmpUp, wantUp, &outDiff)
+		t.Errorf("\nup script: got the following differences:\n%v", outDiff.String())
+	}
+	if !bytes.Equal(tmpDown, wantDown) {
+		var outDiff bytes.Buffer
+		diff.Text("got", wantDownPath, tmpDown, wantDown, &outDiff)
+		t.Errorf("\ndown script: got the following differences:\n%v", outDiff.String())
+	}
+}
+
+func runFailure(t *testing.T, args []string, wantError error) {
+	tmpDir, err := ioutil.TempDir("", "terravalet")
+	if err != nil {
+		t.Fatalf("creating temporary dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	tmpUpPath := tmpDir + "/up"
+	tmpDownPath := tmpDir + "/down"
+
+	args = append(args, "-up", tmpUpPath, "-down", tmpDownPath)
+
+	err = run(args)
+
+	if err == nil {
+		t.Fatalf("\ngot:  no error\nwant: %q", err)
+	}
+	if err.Error() != wantError.Error() {
+		t.Fatalf("\ngot:  %q\nwant: %q", err, wantError)
 	}
 }
 

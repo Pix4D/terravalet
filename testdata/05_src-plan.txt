@@ -1,0 +1,6 @@
+Terraform will perform the following actions:
+
+  # aws_batch_compute_environment.foo_batch will be destroyed
+
+  # aws_batch_job_definition.foo will be created
+
