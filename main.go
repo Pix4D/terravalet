@@ -370,26 +370,24 @@ func matchFuzzy(create, destroy *strset.Set) (map[string]string, map[string]stri
 
 	for len(candidates) > 0 {
 		bestCandidate := candidates[0]
+		tmpCandidates := []candidate{}
 
 		for _, c := range candidates[1:] {
-			if bestCandidate.distance < c.distance {
-				break
+			if bestCandidate.distance == c.distance {
+				if (bestCandidate.create == c.create) || (bestCandidate.destroy == c.destroy) {
+					return map[string]string{}, map[string]string{},
+						fmt.Errorf("ambiguous migration: {%s} -> {%s} or {%s} -> {%s}",
+							bestCandidate.create, bestCandidate.destroy,
+							c.create, c.destroy,
+						)
+				}
 			}
-			if (bestCandidate.create == c.create) || (bestCandidate.destroy == c.destroy) {
-				return map[string]string{},
-					map[string]string{},
-					fmt.Errorf("ambiguous migration: {%s} -> {%s} or {%s} -> {%s}",
-						bestCandidate.create, bestCandidate.destroy,
-						c.create, c.destroy,
-					)
-			}
-		}
-		tmpCandidates := []candidate{}
-		for _, c := range candidates[1:] {
 			if (bestCandidate.create != c.create) && (bestCandidate.destroy != c.destroy) {
 				tmpCandidates = append(tmpCandidates, candidate{c.distance, c.create, c.destroy})
 			}
+
 		}
+
 		candidates = tmpCandidates
 		upMatches[bestCandidate.destroy] = bestCandidate.create
 		downMatches[bestCandidate.create] = bestCandidate.destroy

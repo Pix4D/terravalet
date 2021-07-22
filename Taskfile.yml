@@ -8,16 +8,10 @@ tasks:
   default:
     deps: [test]
 
-  clean:
-    desc: Delete build artifacts
-    cmds: [rm -rf bin/*]
-
-  terravalet:
+  build:
     desc: Build the terravalet executable
-    deps: [clean]
     cmds:
-      - mkdir -p bin
-      - cd bin && go build -v -ldflags="{{.LDFLAGS}}" ..
+      - go build -o bin/terravalet -v -ldflags="{{.LDFLAGS}}" .
     vars: &build-vars
       FULL_VERSION:
         sh: git describe --long --dirty --always
@@ -25,7 +19,7 @@ tasks:
 
   test:
     desc: Run the integration tests
-    deps: [terravalet]
+    deps: [build]
     cmds:
       - "{{.TESTRUNNER}} ./..."
     vars:
