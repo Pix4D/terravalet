@@ -25,3 +25,4 @@ terraform state mv -lock=false -state=local.tfstate \
 terraform state mv -lock=false -state=local.tfstate \
     'module.prometheus_instance.null_resource.provision' \
     'module.prometheus.null_resource.provision_prometheus'
+
