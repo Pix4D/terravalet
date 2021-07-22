@@ -20,8 +20,7 @@ import (
 
 var (
 	// Filled by the linker.
-	fullVersion  = "unknown" // example: v0.0.9-8-g941583d027-dirty
-	shortVersion = "unknown" // example: v0.0.9
+	fullVersion = "unknown" // example: v0.0.9-8-g941583d027-dirty
 )
 
 func main() {

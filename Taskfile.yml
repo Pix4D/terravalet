@@ -14,15 +14,14 @@ tasks:
 
   terravalet:
     desc: Build the terravalet executable
-    dir: bin
+    deps: [clean]
     cmds:
-      - go build -v -ldflags="{{.LDFLAGS}}" ..
+      - mkdir -p bin
+      - cd bin && go build -v -ldflags="{{.LDFLAGS}}" ..
     vars: &build-vars
       FULL_VERSION:
         sh: git describe --long --dirty --always
-      SHORT_VERSION:
-        sh: git describe --abbrev=0
-      LDFLAGS: -w -s -X main.fullVersion={{.FULL_VERSION}} -X main.shortVersion={{.SHORT_VERSION}}
+      LDFLAGS: -w -s -X main.fullVersion={{.FULL_VERSION}}
 
   test:
     desc: Run the integration tests
