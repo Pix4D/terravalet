@@ -44,6 +44,13 @@ func TestRunRenameSuccess(t *testing.T) {
 			"testdata/03_fuzzy-match.up.sh",
 			"testdata/03_fuzzy-match.down.sh",
 		},
+		{
+			"q-gram fuzzy match complicated (regression)",
+			[]string{"-fuzzy-match"},
+			"testdata/07_fuzzy-match.plan.txt",
+			"testdata/07_fuzzy-match.up.sh",
+			"testdata/07_fuzzy-match.down.sh",
+		},
 	}
 
 	for _, tc := range testCases {

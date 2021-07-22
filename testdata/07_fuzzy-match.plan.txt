@@ -1,0 +1,13 @@
+# aws_route53_record.private["prometheus"] will be destroyed
+# aws_security_group_rule.reverseproxy_to_prometheus_pushprox will be destroyed
+# null_resource.configure_alerts will be created
+# null_resource.provision_monitor_in_nginx must be replaced
+# module.prometheus.aws_instance.prometheus will be destroyed
+# module.prometheus.aws_volume_attachment.storage_attach will be destroyed
+# module.prometheus.null_resource.configure_alerts will be destroyed
+# module.prometheus.null_resource.provision_prometheus will be destroyed
+# module.prometheus_instance.aws_instance.instance will be created
+# module.prometheus_instance.aws_route53_record.internal will be created
+# module.prometheus_instance.aws_security_group_rule.extra_rules["reverseproxy_to_prometheus_pushprox"] will be created
+# module.prometheus_instance.aws_volume_attachment.volumes["/dev/xvdh"] will be created
+# module.prometheus_instance.null_resource.provision will be created
