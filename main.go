@@ -20,8 +20,7 @@ import (
 
 var (
 	// Filled by the linker.
-	fullVersion  = "unknown" // example: v0.0.9-8-g941583d027-dirty
-	shortVersion = "unknown" // example: v0.0.9
+	fullVersion = "unknown" // example: v0.0.9-8-g941583d027-dirty
 )
 
 func main() {
@@ -132,7 +131,10 @@ func rename(upPath, downPath, planPath, localStatePath string, fuzzyMatch bool) 
 		return fmt.Errorf("required fuzzy-match but there is nothing left to match")
 	}
 	if fuzzyMatch {
-		upMatches, downMatches = matchFuzzy(create, destroy)
+		upMatches, downMatches, err = matchFuzzy(create, destroy)
+		if err != nil {
+			return fmt.Errorf("fuzzyMatch: %v", err)
+		}
 		msg := collectErrors(create, destroy)
 		if msg != "" {
 			return fmt.Errorf("matchFuzzy: %v", msg)
@@ -344,54 +346,56 @@ func matchExact(create, destroy *strset.Set) (map[string]string, map[string]stri
 // The criterium used to perform a matchFuzzy is that one of the two elements must be a
 // fuzzy match of the other, according to some definition of fuzzy.
 // Note that the longest element could be the old or the new one, it depends on the inputs.
-func matchFuzzy(create, destroy *strset.Set) (map[string]string, map[string]string) {
+func matchFuzzy(create, destroy *strset.Set) (map[string]string, map[string]string, error) {
 	// old -> new (or equvalenty: destroy -> create)
 	upMatches := map[string]string{}
 	downMatches := map[string]string{}
 
 	type candidate struct {
-		word     string
 		distance int
+		create   string
+		destroy  string
 	}
-	reverse := map[string]candidate{}
+	candidates := []candidate{}
 
-	destroyL := destroy.List()
-	sort.Strings(destroyL)
-	createL := create.List()
-	sort.Strings(createL)
-
-	for _, d := range destroyL {
-		for _, c := range createL {
+	for _, d := range destroy.List() {
+		for _, c := range create.List() {
 			// Here we could also use a custom NGramSizes via
 			// stringosim.QGramSimilarityOptions
 			dist := stringosim.QGram([]rune(d), []rune(c))
-			curr, ok := reverse[c]
-			if !ok || dist < curr.distance {
-				reverse[c] = candidate{d, dist}
-			}
+			candidates = append(candidates, candidate{dist, c, d})
 		}
 	}
+	sort.Slice(candidates, func(i, j int) bool { return candidates[i].distance < candidates[j].distance })
 
-	// Sort the reverse index for reproducibility
-	keys := make([]string, 0, len(reverse))
-	for k := range reverse {
-		keys = append(keys, k)
+	for len(candidates) > 0 {
+		bestCandidate := candidates[0]
+		tmpCandidates := []candidate{}
+
+		for _, c := range candidates[1:] {
+			if bestCandidate.distance == c.distance {
+				if (bestCandidate.create == c.create) || (bestCandidate.destroy == c.destroy) {
+					return map[string]string{}, map[string]string{},
+						fmt.Errorf("ambiguous migration: {%s} -> {%s} or {%s} -> {%s}",
+							bestCandidate.create, bestCandidate.destroy,
+							c.create, c.destroy,
+						)
+				}
+			}
+			if (bestCandidate.create != c.create) && (bestCandidate.destroy != c.destroy) {
+				tmpCandidates = append(tmpCandidates, candidate{c.distance, c.create, c.destroy})
+			}
+
+		}
+
+		candidates = tmpCandidates
+		upMatches[bestCandidate.destroy] = bestCandidate.create
+		downMatches[bestCandidate.create] = bestCandidate.destroy
+		destroy.Remove(bestCandidate.destroy)
+		create.Remove(bestCandidate.create)
 	}
-	sort.Strings(keys)
-	// Traverse the reverse index, populate the up and down match maps and update the source sets.
-	fmt.Printf("WARNING fuzzy match enabled. Double-check the following matches:\n")
-	for _, k := range keys {
-		v := reverse[k]
-		fmt.Printf("%2d %-50s -> %s\n", v.distance, v.word, k)
-		upMatches[v.word] = k
-		downMatches[k] = v.word
 
-		// Remove matched elements from the two sets.
-		destroy.Remove(v.word)
-		create.Remove(k)
-	}
-
-	return upMatches, downMatches
+	return upMatches, downMatches, nil
 }
 
 // Given a map old->new, create a script that for each element in the map issues the

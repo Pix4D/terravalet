@@ -8,25 +8,18 @@ tasks:
   default:
     deps: [test]
 
-  clean:
-    desc: Delete build artifacts
-    cmds: [rm -rf bin/*]
-
-  terravalet:
+  build:
     desc: Build the terravalet executable
-    dir: bin
     cmds:
-      - go build -v -ldflags="{{.LDFLAGS}}" ..
+      - go build -o bin/terravalet -v -ldflags="{{.LDFLAGS}}" .
     vars: &build-vars
       FULL_VERSION:
         sh: git describe --long --dirty --always
-      SHORT_VERSION:
-        sh: git describe --abbrev=0
-      LDFLAGS: -w -s -X main.fullVersion={{.FULL_VERSION}} -X main.shortVersion={{.SHORT_VERSION}}
+      LDFLAGS: -w -s -X main.fullVersion={{.FULL_VERSION}}
 
   test:
     desc: Run the integration tests
-    deps: [terravalet]
+    deps: [build]
     cmds:
       - "{{.TESTRUNNER}} ./..."
     vars:

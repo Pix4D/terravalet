@@ -44,6 +44,13 @@ func TestRunRenameSuccess(t *testing.T) {
 			"testdata/03_fuzzy-match.up.sh",
 			"testdata/03_fuzzy-match.down.sh",
 		},
+		{
+			"q-gram fuzzy match complicated (regression)",
+			[]string{"-fuzzy-match"},
+			"testdata/07_fuzzy-match.plan.txt",
+			"testdata/07_fuzzy-match.up.sh",
+			"testdata/07_fuzzy-match.down.sh",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -437,7 +444,10 @@ func TestMatchFuzzyZeroUnmatched(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
 
-			gotUpMatches, gotDownMatches := matchFuzzy(tc.create, tc.destroy)
+			gotUpMatches, gotDownMatches, err := matchFuzzy(tc.create, tc.destroy)
+			if err != nil {
+				t.Fatalf("got: %s; want: no error", err)
+			}
 
 			if diff := cmp.Diff(tc.wantUpMatches, gotUpMatches); diff != "" {
 				t.Errorf("\nupMatches: mismatch (-want +got):\n%s", diff)
@@ -453,4 +463,19 @@ func TestMatchFuzzyZeroUnmatched(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMatchFuzzyError(t *testing.T) {
+	t.Run("ambiguous migration: two different items have the same match", func(t *testing.T) {
+		create := set.NewStringSet(`abcde`, `abdecde`)
+		destroy := set.NewStringSet(`abdcde`, `hfjabd`)
+		wantError := "ambiguous migration: {abcde} -> {abdcde} or {abdecde} -> {abdcde}"
+		_, _, err := matchFuzzy(create, destroy)
+		if err == nil {
+			t.Fatalf("got: no error; want: an ambiguous migration error")
+		}
+		if err.Error() != wantError {
+			t.Fatalf("got: %s; want: %s", err.Error(), wantError)
+		}
+	})
 }
