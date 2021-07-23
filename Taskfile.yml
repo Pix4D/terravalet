@@ -84,17 +84,15 @@ tasks:
       GITHUB_REPO: terravalet
       # GITHUB_TOKEN expected to be set securely via `gopass` or equivalent
   release-linux:
-    dir: bin/linux
     cmds: &release-cmds
-      - go build -v -ldflags="{{.LDFLAGS}}" ../..
-      - zip terravalet-$GOOS-$GOARCH.zip terravalet
+      - go build -o bin/$GOOS/terravalet -v -ldflags="{{.LDFLAGS}}" .
+      - zip bin/$GOOS/terravalet-$GOOS-$GOARCH.zip bin/$GOOS/terravalet
     env:
       CGO_ENABLED: 0
       GOOS: linux
       GOARCH: amd64
     vars: *build-vars
   release-darwin:
-    dir: bin/darwin
     cmds: *release-cmds
     env:
       CGO_ENABLED: 0

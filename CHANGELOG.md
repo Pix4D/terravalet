@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changes
 ### New
 
+## [v0.5.0] - (2021-07-23)
+
+### Fixes
+
+- Improved Fuzzy matching selection algorithm to iteratively consume the best matching create/destroy combination.
+
 ## [v0.4.0] - (2021-01-25)
 
 ### Fixes
