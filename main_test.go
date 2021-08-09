@@ -123,7 +123,6 @@ func TestRunMoveSuccess(t *testing.T) {
 				"-src-plan", tc.srcPlanPath, "-dst-plan", tc.dstPlanPath,
 				"-src-state", "src-dummy", "-dst-state", "dst-dummy",
 			}
-			// args = append(args, tc.options...)
 
 			runSuccess(t, args, tc.wantUpPath, tc.wantDownPath)
 		})
@@ -168,7 +167,6 @@ func TestRunMoveFailure(t *testing.T) {
 				"-src-plan", tc.srcPlanPath, "-dst-plan", tc.dstPlanPath,
 				"-src-state", "src-dummy", "-dst-state", "dst-dummy",
 			}
-			// args = append(args, tc.options...)
 
 			runFailure(t, args, tc.wantError)
 		})
@@ -478,4 +476,89 @@ func TestMatchFuzzyError(t *testing.T) {
 			t.Fatalf("got: %s; want: %s", err.Error(), wantError)
 		}
 	})
+}
+
+func TestRunImportSuccess(t *testing.T) {
+	testCases := []struct {
+		description  string
+		resDefs      string
+		srcPlanPath  string
+		wantUpPath   string
+		wantDownPath string
+	}{
+		{
+			"import resources",
+			"testdata/terravalet_imports_definitions.json",
+			"testdata/08_import_src-plan.json",
+			"testdata/08_import_up.sh",
+			"testdata/08_import_down.sh",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			args := []string{"import",
+				"-res-defs", tc.resDefs,
+				"-src-plan", tc.srcPlanPath,
+			}
+
+			runSuccess(t, args, tc.wantUpPath, tc.wantDownPath)
+		})
+	}
+}
+
+func TestRunImportFailure(t *testing.T) {
+	testCases := []struct {
+		description string
+		resDefs     string
+		srcPlanPath string
+		wantError   error
+	}{
+		{"non existing src-plan",
+			"testdata/terravalet_imports_definitions.json",
+			"src-plan-path-dummy",
+			fmt.Errorf("opening the terraform plan file: open src-plan-path-dummy: no such file or directory"),
+		},
+		{"src-plan is invalid json",
+			"testdata/terravalet_imports_definitions.json",
+			"testdata/09_import_empty_src-plan.json",
+			fmt.Errorf("parse src-plan: parsing the plan: unexpected end of JSON input"),
+		},
+		{"src-plan must create resource",
+			"testdata/terravalet_imports_definitions.json",
+			"testdata/10_import_no-new-resources.json",
+			fmt.Errorf("parse src-plan: src-plan doesn't contains resources to create"),
+		},
+		{"src-plan contains only undefined resources",
+			"testdata/terravalet_imports_definitions.json",
+			"testdata/11_import_src-plan_undefined_resources.json",
+			fmt.Errorf("parse src-plan: src-plan contains only undefined resources"),
+		},
+		{"src-plan contains a not existing resource parameter",
+			"testdata/terravalet_imports_definitions.json",
+			"testdata/12_import_src-plan_invalid_resource_param.json",
+			fmt.Errorf("parse src-plan: error in resources definition dummy_resource2: field 'long_name' doesn't exist in plan."),
+		},
+		{"terravalet missing resources definitions file",
+			"testdata/missing.file",
+			"testdata/08_import_src-plan.json",
+			fmt.Errorf("opening the definitions file: open testdata/missing.file: no such file or directory"),
+		},
+		{"terravalet invalid resources definitions file",
+			"testdata/invalid_imports_definitions.json",
+			"testdata/08_import_src-plan.json",
+			fmt.Errorf("parse src-plan: parsing resources definitions: invalid character '}' after object key"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			args := []string{"import",
+				"-res-defs", tc.resDefs,
+				"-src-plan", tc.srcPlanPath,
+			}
+
+			runFailure(t, args, tc.wantError)
+		})
+	}
 }

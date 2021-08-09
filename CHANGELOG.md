@@ -11,6 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changes
 ### New
 
+## [v0.6.0] - (2021-08-11)
+
+### New
+
+- Subcommand `import` (new functionality):
+  ```
+  import - Import resources generated out-of-band of Terraform
+
+  Flags: 
+      -res-defs   Path to resources definitions
+      -src-plan   Path to the SRC terraform plan in json format
+      -up         Path to the resources import script to generate (import.up.sh).
+      -down       Path to the resources remove script to generate (import.down.sh).
+
+  ```
+
 ## [v0.5.0] - (2021-07-23)
 
 ### Fixes
@@ -35,22 +51,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rename - Rename resources in the same tf root environment
 
     Flags:
-         --plan          Path to the terraform plan.
-         --fuzzy-match   Enable q-gram distance fuzzy matching.
-         --up            Path to the up migration script to generate
-         --down          Path to the down migration script to generate
+         -plan          Path to the terraform plan.
+         -fuzzy-match   Enable q-gram distance fuzzy matching.
+         -up            Path to the up migration script to generate
+         -down          Path to the down migration script to generate
   ```
 - Subcommand `move` (new functionality):
   ```
   move - Move resources from one root environment to another
 
     Flags:
-         --src-plan    Path to the SRC terraform plan
-         --dst-plan    Path to the DST terraform plan
-         --src-state   Path to the SRC local state to modify
-         --dst-state   Path to the DST local state to modify
-         --up          Path to the up migration script to generate
-         --down        Path to the down migration script to generate
+         -src-plan    Path to the SRC terraform plan
+         -dst-plan    Path to the DST terraform plan
+         -src-state   Path to the SRC local state to modify
+         -dst-state   Path to the DST local state to modify
+         -up          Path to the up migration script to generate
+         -down        Path to the down migration script to generate
   ```
 
 ## [v0.3.0] - (2020-12-11)
@@ -96,3 +112,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [v0.2.0]: https://github.com/Pix4D/terravalet/releases/tag/v0.2.0
 [v0.3.0]: https://github.com/Pix4D/terravalet/releases/tag/v0.3.0
 [v0.4.0]: https://github.com/Pix4D/terravalet/releases/tag/v0.4.0
+[v0.5.0]: https://github.com/Pix4D/terravalet/releases/tag/v0.5.0
+[v0.6.0]: https://github.com/Pix4D/terravalet/releases/tag/v0.6.0

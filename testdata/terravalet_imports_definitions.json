@@ -1,0 +1,52 @@
+{
+  "github_repository": {
+    "priority": 1,
+    "variables": [
+      "name"
+    ]
+  },
+  "github_branch_default": {
+    "variables": [
+      "repository"
+    ]
+  },
+  "github_branch_protection_v3": {
+    "separator": ":",
+    "variables": [
+      "repository",
+      "branch"
+    ]
+  },
+  "github_team_repository": {
+    "separator": ":",
+    "variables": [
+      "team_id",
+      "repository"
+    ]
+  },
+  "github_repository_collaborator": {
+    "separator": ":",
+    "variables": [
+      "repository",
+      "username"
+    ]
+  },
+  "dummy_resource1": {
+    "priority": 1,
+    "variables": [
+      "tag"
+    ]
+  },
+  "dummy_resource2": {
+    "variables": [
+      "long_name"
+    ]
+  },
+  "dummy_resource3": {
+    "separator": ":",
+    "variables": [
+      "etag",
+      "vtag"
+    ]
+  }
+}
