@@ -7,6 +7,19 @@ tasks:
 
   default:
     deps: [test]
+  
+  install-deps:
+    desc: Install tool dependencies.
+    deps:
+      - install-lint
+
+  lint:
+    desc: Lint Terravalet
+    deps:
+      - install-deps
+    cmds:
+      # --enable actually adds to the default linters
+      - golangci-lint run --enable gofmt,gocritic  ./...
 
   build:
     desc: Build the terravalet executable
@@ -99,3 +112,16 @@ tasks:
       GOOS: darwin
       GOARCH: amd64
     vars: *build-vars
+  
+  install-lint:
+    desc: low-level for CI optimization only
+    dir: /tmp
+    cmds:
+      - curl -L {{.GOLANGCI_URL}} -o golangci-lint.tar.gz
+      - tar xzf golangci-lint.tar.gz
+      - cp golangci-lint-{{.GOLANGCI_VERSION}}-linux-amd64/golangci-lint {{.BINDIR}}/golangci-lint
+      - rm -r golangci-lint*
+    vars:
+      GOLANGCI_VERSION: 1.42.0
+      BINDIR: '{{default (print .HOME "/go") .GOPATH}}/bin'
+      GOLANGCI_URL: https://github.com/golangci/golangci-lint/releases/download/v{{.GOLANGCI_VERSION}}/golangci-lint-{{.GOLANGCI_VERSION}}-{{OS}}-{{ARCH}}.tar.gz
