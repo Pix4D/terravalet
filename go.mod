@@ -1,6 +1,6 @@
 module github.com/pix4d/terravalet
 
-go 1.15
+go 1.16
 
 require (
 	github.com/dexyk/stringosim v0.0.0-20170922105913-9d0b3e91a842
