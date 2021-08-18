@@ -2,7 +2,8 @@
 
 A tool to help with some [Terraform](https://www.terraform.io/) operations.
 
-For the time being it generates state migration scripts that work also for Terraform workspaces.
+1. It can generate migration scripts that work also for Terraform workspaces.
+2. It can generate import and remove states script for existing resources.
 
 The idea of migrations comes from [tfmigrate](https://github.com/minamijoyo/tfmigrate). Then this blog [post](https://medium.com/@lynnlin827/moving-terraform-resources-states-from-one-remote-state-to-another-c76f8b76a996)  made me realize that `terraform state mv` had a bug and how to workaround it.
 
@@ -35,9 +36,10 @@ Be careful when using Terraform workspaces, since they are invisible and persist
 
 ## Usage
 
-There are two modes of operation:
+There are three modes of operation:
 - [Rename resources](#rename-resources-within-the-same-state) within the same state, with optional fuzzy match.
 - [Move resources](#-move-resources-from-one-state-to-another) from one state to another.
+- [Import existing resources](#-import-existing-resources) for Terraform out-of-band resouces.
 
 they will be explained in the following sections.
 
@@ -191,6 +193,135 @@ $ terraform state push local.tfstate
 
 Push the two backups `src/local.tfstate.BACK` and `dst/local.tfstate.BACK`.
 
+## Import existing resources
+
+The scope is to import as much as possible existing out-of-band resources into terraform state. We want to avoid to create something that already exists. The example used in this section refers to the github provider. Suppose you have new already created resources added to `.tf` configuration.
+
+### Generate a plan in json format
+
+terraform plan:
+
+```
+$ cd $SRC_ROOT
+$ terraform plan -no-color 2>&1 -out src-plan
+$ terraform show -json my_plan | tee src-plan.json
+
+```
+
+### Generate import/remove scripts
+
+Take as input the Terraform plan in json format `src-plan.json` and generate UP and DOWN import scripts.
+
+```
+$ cd repo
+$ terravalet import \
+    -res-defs  my_definitions.json
+    -src-plan  src/src-plan.json \
+    -up import.up.sh -down import.down.sh
+```
+
+`import.up.sh ` will be generated with all the `import` flags following the plan containing `create` action.
+`import.down.sh ` will be generated with all the `state rm` flags as a mirror of import above.
+
+### Run the import script
+
+1. Review the contents of `import.up.sh `.
+   * Ensure the parents resources are placed on the top of `up` script followed by their children.
+   * Ensure the children resources are placed on the top of `down` script followed by their parents.
+   * Ensure the correctness of parameters. 
+2. Run it: `sh ./import.up.sh`
+
+**1. NOTE: even if terravalet tries to guess the correct order of this action, ensure the script import first the root resource**
+
+**2. NOTE: The script modifies the remote state, but it is not dangerous because it only import new resources if they already exist and it doesn't create/destroy anything.**
+
+Terraform will try to import as much as possible, if the corresponding address in state doesn't exist yet, it means it should be created later using `terraform apply`, actually the resource is in `.tf` configuration, but not yet in real world.
+
+#### Example
+
+Here is a new plan, scripts have been already generated:
+
+```
+ $ terraform plan
+ .....
+ Plan: 6 to add, 0 to change, 0 to destroy.
+```
+These are new resources, let's run the import script and run the plan again:
+
+```
+$ sh import.up.sh
+module.github.github_repository.repos["test-import-gh"]: Importing from ID "test-import-gh"...
+module.github.github_repository.repos["test-import-gh"]: Import prepared!
+  Prepared github_repository for import
+module.github.github_repository.repos["test-import-gh"]: Refreshing state... [id=test-import-gh]
+
+Import successful!
+.....
+```
+
+During the run an error like this can raise:
+
+```
+Error: Cannot import non-existent remote object
+
+While attempting to import an existing object to
+github_team_repository.all_teams["test-import-gh.integration"], the provider
+detected that no object exists with the given id. Only pre-existing objects
+can be imported; check that the id is correct and that it is associated with
+the provider's configured region or endpoint, or use "terraform apply" to
+create a new remote object for this resource.
+```
+
+In this specific case the out-of-band resource didn't have a setting yet about teams, so it's normal.
+
+Next plan should be different:
+
+```
+$ terraform plan
+.....
+Plan: 3 to add, 2 to change, 0 to destroy.
+```
+
+In conclusion, the plan now is close to real resources states and terraform is now aware of them.
+In every case plan doesn't contain any `destroy` sentence.
+
+### Rollback
+
+Run `import.down.sh` script that remove the same resources from terraform state that have been imported with `import.up.sh`.
+
+### Resources definition
+
+Terravalet doesn't know anything about resources, it just parses the plan and uses the resources configuration file passed via the flag `res-defs`. An example can be found in [testdata](testdata/terravalet_imports_definitions.json) containing some github resources as example. 
+
+Basically we need to inform Terravalet where to search data to build the up/down scripts. The correct information can be found on the [specific provider documentation](https://registry.terraform.io/browse/providers). Under the hood, Terravalet matches the parsed plan and resources definition file. 
+
+1. The json resources definition is a map of resources type objects identified by their own name as a key.
+2. The resource type object may have or not `priority`: import statement for that resource must be placed at the top of up.sh and at the bottom of down.sh (resources that must be imported before others).
+3. The resource type object may have or not `separator`: in case of multiple arguments it is mandatory and it will be used to join them. Using the example below, `tag, owner` will be joined into the string `<tag_value>:<owner_value>`.
+4. The resource type object must have `variables`: a list of fields names that are the keys in the plan to retreive the correct values building the import statement. Using the example below, terravalet will search for a keys `tag` and `owner` in terraform plan for that resource. 
+
+```
+{
+  "dummy_resource1": {
+    "priority": 1,
+    "separator": ":"
+    "variables": [
+      "tag",
+      "owner"
+    ]
+  }
+}
+```
+
+### Error cases
+
+Ignorable errors:
+1. Resource X doesn't exists yet, it resides only in new terraform configuration.
+2. Resource X exists, but depends on resource Y that has not been imported yet (should be fine setting the priority)
+
+NOT ignorable errors: 
+1. Provider specific argument ID is wrong
+
 ## Install
 
 ### Install from binary package
@@ -215,9 +346,9 @@ Push the two backups `src/local.tfstate.BACK` and `dst/local.tfstate.BACK`.
 1. Install [github-release](https://github.com/github-release/github-release).
 2. Install [gopass](https://github.com/gopasspw/gopass) or equivalent.
 3. Configure a GitHub token:
-   3.1 Go to [Personal Access tokens](https://github.com/settings/tokens)
-   3.2 Click on "Generate new token"
-   3.3 Select only the `repo` scope
+    * Go to [Personal Access tokens](https://github.com/settings/tokens)
+    * Click on "Generate new token"
+    * Select only the `repo` scope
 4. Store the token securely with a tool like `gopass`. The name `GITHUB_TOKEN` is expected by `github-release`
    ```
    $ gopass insert gh/terravalet/GITHUB_TOKEN

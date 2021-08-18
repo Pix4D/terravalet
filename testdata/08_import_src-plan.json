@@ -1,0 +1,65 @@
+{
+    "resource_changes": [
+      {
+        "address": "module.github.github_branch_default.default[\"test-import-gh\"]",
+        "module_address": "module.github",
+        "mode": "managed",
+        "type": "github_branch_default",
+        "name": "default",
+        "index": "test-import-gh",
+        "provider_name": "registry.terraform.io/hashicorp/github",
+        "change": {
+          "actions": [
+            "create"
+          ],
+          "before": null,
+          "after": {
+            "branch": "staging",
+            "repository": "test-import-gh"
+          },
+          "after_unknown": {
+            "id": true
+          }
+        }
+      },
+      {
+        "address": "module.github.github_branch_protection_v3.settings[\"test-import-gh:master\"]",
+        "module_address": "module.github",
+        "mode": "managed",
+        "type": "github_branch_protection_v3",
+        "name": "settings",
+        "index": "test-import-gh:master",
+        "provider_name": "registry.terraform.io/hashicorp/github",
+        "change": {
+          "actions": [
+            "create"
+          ],
+          "before": null,
+          "after": {
+            "branch": "master",
+            "enforce_admins": true,
+            "repository": "test-import-gh",
+            "require_signed_commits": false
+          }
+        }
+      },
+      {
+        "address": "module.github.github_repository.repos[\"test-import-gh\"]",
+        "module_address": "module.github",
+        "mode": "managed",
+        "type": "github_repository",
+        "name": "repos",
+        "index": "test-import-gh",
+        "provider_name": "registry.terraform.io/hashicorp/github",
+        "change": {
+          "actions": [
+            "create"
+          ],
+          "after": {
+            "description": "A test repo for github import",
+            "name": "test-import-gh"
+          }
+        }
+      }
+    ]
+  }

@@ -1,0 +1,23 @@
+{
+    "resource_changes": [
+      {
+        "address": "module.dummy[\"hash-tag\"]",
+        "type": "dummy_resource2",
+        "name": "default",
+        "index": "hash-tag",
+        "provider_name": "registry.terraform.io/hashicorp/dummy",
+        "change": {
+          "actions": [
+            "create"
+          ],
+          "before": null,
+          "after": {
+            "etag": "myTest"
+          },
+          "after_unknown": {
+            "id": true
+          }
+        }
+      }
+    ]
+  }

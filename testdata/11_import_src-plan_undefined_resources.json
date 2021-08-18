@@ -1,0 +1,46 @@
+{
+    "resource_changes": [
+      {
+        "address": "module.github.github_branch_default.default[\"test-import-gh\"]",
+        "module_address": "module.github",
+        "mode": "managed",
+        "type": "myprovider_branch_default",
+        "name": "default",
+        "index": "test-import-gh",
+        "provider_name": "registry.terraform.io/hashicorp/myprovider",
+        "change": {
+          "actions": [
+            "create"
+          ],
+          "before": null,
+          "after": {
+            "branch": "staging",
+            "repository": "test-import-gh"
+          },
+          "after_unknown": {
+            "id": true
+          }
+        }
+      },
+      {
+        "address": "module.github.github_branch_protection_v3.settings[\"test-import-gh:master\"]",
+        "module_address": "module.github",
+        "mode": "managed",
+        "type": "myprovider_branch_protection_v3",
+        "name": "settings",
+        "index": "test-import-gh:master",
+        "provider_name": "registry.terraform.io/hashicorp/myprovider",
+        "change": {
+          "actions": [
+            "create"
+          ],
+          "before": null,
+          "after": {
+            "branch": "master",
+            "enforce_admins": true,
+            "repository": "test-import-gh"
+          }
+        }
+      }
+    ]
+  }
