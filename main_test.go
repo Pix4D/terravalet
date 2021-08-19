@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -10,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/pkg/diff"
 	"github.com/scylladb/go-set"
 	"github.com/scylladb/go-set/strset"
 )
@@ -207,15 +205,11 @@ func runSuccess(t *testing.T, args []string, wantUpPath string, wantDownPath str
 		t.Fatalf("reading tmp down file: %v", err)
 	}
 
-	if !bytes.Equal(tmpUp, wantUp) {
-		var outDiff bytes.Buffer
-		diff.Text("got", wantUpPath, tmpUp, wantUp, &outDiff)
-		t.Errorf("\nup script: got the following differences:\n%v", outDiff.String())
+	if diff := cmp.Diff(tmpUp, wantUp, cmpOpt); diff != "" {
+		t.Errorf("\nup script: mismatch (-want +got):\n%s", diff)
 	}
-	if !bytes.Equal(tmpDown, wantDown) {
-		var outDiff bytes.Buffer
-		diff.Text("got", wantDownPath, tmpDown, wantDown, &outDiff)
-		t.Errorf("\ndown script: got the following differences:\n%v", outDiff.String())
+	if diff := cmp.Diff(tmpDown, wantDown, cmpOpt); diff != "" {
+		t.Errorf("\ndown script: mismatch (-want +got):\n%s", diff)
 	}
 }
 
