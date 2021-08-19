@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changes
 ### New
 
+## [Unreleased] - (2021-XX-XX)
+
+### Changes
+
+- Bump go to latest v1.16
+
 ## [v0.6.0] - (2021-08-11)
 
 ### New
