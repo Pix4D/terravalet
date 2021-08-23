@@ -1,0 +1,34 @@
+# based on https://github.com/marco-m/timeit/blob/master/.github/workflows/ci.yml
+
+on: [push]
+name: CI
+jobs:
+  all:
+    strategy:
+      matrix:
+        go-version: [1.17.x]
+        os: [ubuntu-latest]
+        task-version: [v3.7.0]
+        gotestsum-version: [v1.7.0]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Install Go ${{ matrix.go-version }}
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go-version }}
+    - name: Install task ${{ matrix.task-version }}
+      run: go install github.com/go-task/task/v3/cmd/task@${{ matrix.task-version }}
+    - name: Install gotestsum ${{ matrix.gotestsum-version }}
+      run: go install gotest.tools/gotestsum@${{ matrix.gotestsum-version }}
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
+        # By default, actions/checkout will persist the GITHUB_TOKEN, so that further
+        # steps in the job can perform authenticated git commands (that is: WRITE to
+        # the repo). Following the Principle of least privilege, we disable this as long
+        # as we don't need it.
+        persist-credentials: false
+    - name: Go lint
+      run: task lint
+    - name: Terravalet tests
+      run: task test
