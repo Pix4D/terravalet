@@ -1,6 +1,6 @@
 # based on https://github.com/marco-m/timeit/blob/master/.github/workflows/ci.yml
 
-on: [push]
+on: [push, pull_request_target]
 name: CI
 jobs:
   all:
