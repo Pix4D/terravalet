@@ -93,9 +93,7 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 		for _, field := range variables {
 			if _, ok := v[field]; !ok {
 				return add, remove,
-					fmt.Errorf(
-						"error in resources definition %s: field '%s' doesn't exist in plan.", t, field,
-					)
+					fmt.Errorf("error in resources definition %s: field '%s' doesn't exist in plan", t, field)
 			}
 			id = append(id, fmt.Sprintf("%s", v[field]))
 		}
@@ -106,13 +104,12 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 			add = append([]string{arg}, add...)
 			// Append
 			remove = append(remove, a)
-			break
+		} else {
+			// Append
+			add = append(add, arg)
+			// Prepend
+			remove = append([]string{a}, remove...)
 		}
-		// Append
-		add = append(add, arg)
-		// Prepend
-		remove = append([]string{a}, remove...)
-
 	}
 
 	if len(add) == 0 {

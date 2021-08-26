@@ -11,11 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changes
 ### New
 
-## [Unreleased] - (2021-XX-XX)
+## [v0.6.1] - (2021-08-24)
 
 ### Changes
 
 - Bump go to latest v1.17
+
+### Fixes
+
+- Fix breaking too early the loop giving a not fully compiled script.
 
 ## [v0.6.0] - (2021-08-11)
 

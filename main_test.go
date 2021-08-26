@@ -531,7 +531,7 @@ func TestRunImportFailure(t *testing.T) {
 		{"src-plan contains a not existing resource parameter",
 			"testdata/terravalet_imports_definitions.json",
 			"testdata/12_import_src-plan_invalid_resource_param.json",
-			fmt.Errorf("parse src-plan: error in resources definition dummy_resource2: field 'long_name' doesn't exist in plan."),
+			fmt.Errorf("parse src-plan: error in resources definition dummy_resource2: field 'long_name' doesn't exist in plan"),
 		},
 		{"terravalet missing resources definitions file",
 			"testdata/missing.file",
