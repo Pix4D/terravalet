@@ -458,18 +458,34 @@ func TestMatchFuzzyZeroUnmatched(t *testing.T) {
 }
 
 func TestMatchFuzzyError(t *testing.T) {
-	t.Run("ambiguous migration: two different items have the same match", func(t *testing.T) {
-		create := set.NewStringSet(`abcde`, `abdecde`)
-		destroy := set.NewStringSet(`abdcde`, `hfjabd`)
-		wantError := "ambiguous migration: {abcde} -> {abdcde} or {abdecde} -> {abdcde}"
-		_, _, err := matchFuzzy(create, destroy)
-		if err == nil {
-			t.Fatalf("got: no error; want: an ambiguous migration error")
-		}
-		if err.Error() != wantError {
-			t.Fatalf("got: %s; want: %s", err.Error(), wantError)
-		}
-	})
+	create := set.NewStringSet(`abcde`, `abdecde`)
+	destroy := set.NewStringSet(`abdcde`, `hfjabd`)
+	_, _, err := matchFuzzy(create, destroy)
+	if err == nil {
+		t.Fatalf("got: no error; want: an ambiguous migration error")
+	}
+
+	gotMsg := err.Error()
+	var msg string
+
+	want := "ambiguous migration:"
+	if !strings.HasPrefix(gotMsg, want) {
+		msg += fmt.Sprintf("error message does not start with %q\n", want)
+	}
+
+	want = "{abcde} -> {abdcde}"
+	if !strings.Contains(gotMsg, want) {
+		msg += fmt.Sprintf("error message does not contain %q", want)
+	}
+
+	want = "{abdecde} -> {abdcde}"
+	if !strings.Contains(gotMsg, want) {
+		msg += fmt.Sprintf("error message does not contain %q", want)
+	}
+
+	if msg != "" {
+		t.Fatal(msg)
+	}
 }
 
 func TestRunImportSuccess(t *testing.T) {
