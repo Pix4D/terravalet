@@ -195,28 +195,32 @@ Push the two backups `src/local.tfstate.BACK` and `dst/local.tfstate.BACK`.
 
 ## Import existing resources
 
-The scope is to import as much as possible existing out-of-band resources into terraform state. We want to avoid to create something that already exists. The example used in this section refers to the github provider. Suppose you have new already created resources added to `.tf` configuration.
+The `terraform import` command can import existing resources into Terraform state, but requires to painstakingly write by hand the arguments, one per resource. This is error-prone and tedious.
 
-### Generate a plan in json format
+Thus, `terravalet import` creates the import commands for you.
+
+As with the case with the raw `terraform import`, you must describe in the Terraform configuration the resources you want to import before attempting to import it: neither `terraform` nor `terravalet` are able to write Terraform configuration, they only add to the Terraform state.
+
+The examples below refers to the [Terraform GitHub provider](https://registry.terraform.io/providers/integrations/github/latest/docs), but any provider can be described.
+
+### Generate a plan in JSON format
 
 terraform plan:
 
 ```
 $ cd $SRC_ROOT
 $ terraform plan -no-color 2>&1 -out src-plan
-$ terraform show -json my_plan | tee src-plan.json
-
+$ terraform show -json src-plan | tee src-plan.json
 ```
 
 ### Generate import/remove scripts
 
-Take as input the Terraform plan in json format `src-plan.json` and generate UP and DOWN import scripts.
+Take as input the Terraform plan in JSON format `src-plan.json` and generate UP and DOWN import scripts.
 
 ```
-$ cd repo
 $ terravalet import \
     -res-defs  my_definitions.json
-    -src-plan  src/src-plan.json \
+    -src-plan  src-plan.json \
     -up import.up.sh -down import.down.sh
 ```
 
@@ -228,7 +232,7 @@ $ terravalet import \
 1. Review the contents of `import.up.sh `.
    * Ensure the parents resources are placed on the top of `up` script followed by their children.
    * Ensure the children resources are placed on the top of `down` script followed by their parents.
-   * Ensure the correctness of parameters. 
+   * Ensure the correctness of parameters.
 2. Run it: `sh ./import.up.sh`
 
 **1. NOTE: even if terravalet tries to guess the correct order of this action, ensure the script import first the root resource**
@@ -291,14 +295,14 @@ Run `import.down.sh` script that remove the same resources from terraform state 
 
 ### Resources definition
 
-Terravalet doesn't know anything about resources, it just parses the plan and uses the resources configuration file passed via the flag `res-defs`. An example can be found in [testdata](testdata/terravalet_imports_definitions.json) containing some github resources as example. 
+Terravalet doesn't know anything about resources, it just parses the plan and uses the resources configuration file passed via the flag `res-defs`. An example can be found in [testdata](testdata/terravalet_imports_definitions.json) containing some github resources as example.
 
-Basically we need to inform Terravalet where to search data to build the up/down scripts. The correct information can be found on the [specific provider documentation](https://registry.terraform.io/browse/providers). Under the hood, Terravalet matches the parsed plan and resources definition file. 
+Basically we need to inform Terravalet where to search data to build the up/down scripts. The correct information can be found on the [specific provider documentation](https://registry.terraform.io/browse/providers). Under the hood, Terravalet matches the parsed plan and resources definition file.
 
 1. The json resources definition is a map of resources type objects identified by their own name as a key.
 2. The resource type object may have or not `priority`: import statement for that resource must be placed at the top of up.sh and at the bottom of down.sh (resources that must be imported before others).
 3. The resource type object may have or not `separator`: in case of multiple arguments it is mandatory and it will be used to join them. Using the example below, `tag, owner` will be joined into the string `<tag_value>:<owner_value>`.
-4. The resource type object must have `variables`: a list of fields names that are the keys in the plan to retreive the correct values building the import statement. Using the example below, terravalet will search for a keys `tag` and `owner` in terraform plan for that resource. 
+4. The resource type object must have `variables`: a list of fields names that are the keys in the plan to retreive the correct values building the import statement. Using the example below, terravalet will search for a keys `tag` and `owner` in terraform plan for that resource.
 
 ```
 {
