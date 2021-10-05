@@ -9,9 +9,7 @@ import (
 )
 
 type Resource struct {
-	ResourceChanges []struct {
-		Res
-	} `json:"resource_changes"`
+	ResourceChanges []Res `json:"resource_changes"`
 }
 
 type Res struct {
@@ -66,7 +64,7 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 	for _, resource := range resources {
 		action := resource.Change.Actions[0]
 		if action == "create" {
-			filteredResources = append(filteredResources, resource.Res)
+			filteredResources = append(filteredResources, resource)
 		}
 	}
 
