@@ -29,10 +29,9 @@ type Definitions struct {
 }
 
 func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
-
-	add := make([]string, 0)
-	remove := make([]string, 0)
-	configs := make(map[string]Definitions)
+	var add []string
+	var remove []string
+	var configs map[string]Definitions
 	var resourcesBundle ResourcesBundle
 	var filteredResources []ResourceChange
 
