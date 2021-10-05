@@ -60,8 +60,7 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 
 	// Filter all "create" resources before going further
 	for _, resource := range resourcesBundle.ResourceChanges {
-		action := resource.Change.Actions[0]
-		if action == "create" {
+		if resource.Change.Actions[0] == "create" {
 			filteredResources = append(filteredResources, resource)
 		}
 	}
@@ -81,18 +80,16 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 			break
 		}
 		resourceParams := configs[resource.Type]
-		variables := resourceParams.Variables
 		var id []string
 		after := resource.Change.After.(map[string]interface{})
-		for _, field := range variables {
+		for _, field := range resourceParams.Variables {
 			if _, ok := after[field]; !ok {
 				return add, remove,
 					fmt.Errorf("error in resources definition %s: field '%s' doesn't exist in plan", resource.Type, field)
 			}
 			id = append(id, fmt.Sprintf("%s", after[field]))
 		}
-		separator := resourceParams.Separator
-		arg := fmt.Sprintf("%s %s", resAddr, strings.Join(id, separator))
+		arg := fmt.Sprintf("%s %s", resAddr, strings.Join(id, resourceParams.Separator))
 		if resourceParams.Priority == 1 {
 			// Prepend
 			add = append([]string{arg}, add...)
