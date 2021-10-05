@@ -71,8 +71,6 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 	}
 
 	for _, resource := range filteredResources {
-		// Get resource address
-		resAddr := fmt.Sprintf("'%s'", resource.Address)
 		// Proceed only if type is declared in resources definitions
 		if _, ok := configs[resource.Type]; !ok {
 			msg := fmt.Sprintf("Warning: resource %s is not defined. Check %s documentation\n", resource.Type, resource.ProviderName)
@@ -89,6 +87,8 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 			}
 			id = append(id, fmt.Sprintf("%s", after[field]))
 		}
+
+		resAddr := fmt.Sprintf("'%s'", resource.Address)
 		arg := fmt.Sprintf("%s %s", resAddr, strings.Join(id, resourceParams.Separator))
 		if resourceParams.Priority == 1 {
 			// Prepend
