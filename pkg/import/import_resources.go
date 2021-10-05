@@ -8,11 +8,11 @@ import (
 	"strings"
 )
 
-type Resource struct {
-	ResourceChanges []Res `json:"resource_changes"`
+type ResourcesBundle struct {
+	ResourceChanges []ResourceChange `json:"resource_changes"`
 }
 
-type Res struct {
+type ResourceChange struct {
 	Address      string `json:"address"`
 	Type         string `json:"type"`
 	ProviderName string `json:"provider_name"`
@@ -33,15 +33,15 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 	add := make([]string, 0)
 	remove := make([]string, 0)
 	configs := make(map[string]Definitions)
-	var planParsed Resource
-	var filteredResources []Res
+	var resourcesBundle ResourcesBundle
+	var filteredResources []ResourceChange
 
 	plan, err := ioutil.ReadAll(rd)
 	if err != nil {
 		return add, remove,
 			fmt.Errorf("reading the plan file: %s", err)
 	}
-	if err = json.Unmarshal([]byte(plan), &planParsed); err != nil {
+	if err = json.Unmarshal([]byte(plan), &resourcesBundle); err != nil {
 		return add, remove,
 			fmt.Errorf("parsing the plan: %s", err)
 	}
@@ -58,10 +58,9 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 
 	// Return objects in the correct order if 'priority' parameter is set in provider configuration.
 	// The remove order is reversed (LIFO logic).
-	resources := planParsed.ResourceChanges
 
 	// Filter all "create" resources before going further
-	for _, resource := range resources {
+	for _, resource := range resourcesBundle.ResourceChanges {
 		action := resource.Change.Actions[0]
 		if action == "create" {
 			filteredResources = append(filteredResources, resource)
