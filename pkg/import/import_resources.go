@@ -73,38 +73,36 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 
 	for _, resource := range filteredResources {
 		// Get resource address
-		a := fmt.Sprintf("'%s'", resource.Address)
-		p := resource.ProviderName
-		t := resource.Type
+		resAddr := fmt.Sprintf("'%s'", resource.Address)
 		// Proceed only if type is declared in resources definitions
-		if _, ok := configs[t]; !ok {
-			msg := fmt.Sprintf("Warning: resource %s is not defined. Check %s documentation\n", t, p)
+		if _, ok := configs[resource.Type]; !ok {
+			msg := fmt.Sprintf("Warning: resource %s is not defined. Check %s documentation\n", resource.Type, resource.ProviderName)
 			fmt.Printf("\033[1;33m%s\033[0m", msg)
 			break
 		}
-		resourceParams := configs[t]
+		resourceParams := configs[resource.Type]
 		variables := resourceParams.Variables
 		var id []string
-		v := resource.Change.After.(map[string]interface{})
+		after := resource.Change.After.(map[string]interface{})
 		for _, field := range variables {
-			if _, ok := v[field]; !ok {
+			if _, ok := after[field]; !ok {
 				return add, remove,
-					fmt.Errorf("error in resources definition %s: field '%s' doesn't exist in plan", t, field)
+					fmt.Errorf("error in resources definition %s: field '%s' doesn't exist in plan", resource.Type, field)
 			}
-			id = append(id, fmt.Sprintf("%s", v[field]))
+			id = append(id, fmt.Sprintf("%s", after[field]))
 		}
 		separator := resourceParams.Separator
-		arg := fmt.Sprintf("%s %s", a, strings.Join(id, separator))
+		arg := fmt.Sprintf("%s %s", resAddr, strings.Join(id, separator))
 		if resourceParams.Priority == 1 {
 			// Prepend
 			add = append([]string{arg}, add...)
 			// Append
-			remove = append(remove, a)
+			remove = append(remove, resAddr)
 		} else {
 			// Append
 			add = append(add, arg)
 			// Prepend
-			remove = append([]string{a}, remove...)
+			remove = append([]string{resAddr}, remove...)
 		}
 	}
 
