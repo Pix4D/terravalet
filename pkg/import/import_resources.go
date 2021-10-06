@@ -74,11 +74,14 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 		// Get resource address
 		resAddr := fmt.Sprintf("'%s'", resource.Address)
 		// Proceed only if type is declared in resources definitions
+		// QUESTIONS:
+		// - why do we print a warning and break, instead of returning the warning msg as an error?
 		if _, ok := configs[resource.Type]; !ok {
 			msg := fmt.Sprintf("Warning: resource %s is not defined. Check %s documentation\n", resource.Type, resource.ProviderName)
 			fmt.Printf("\033[1;33m%s\033[0m", msg)
 			break
 		}
+
 		resourceParams := configs[resource.Type]
 		var id []string
 		after := resource.Change.After.(map[string]interface{})
@@ -90,7 +93,9 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 			id = append(id, fmt.Sprintf("%s", after[field]))
 		}
 		arg := fmt.Sprintf("%s %s", resAddr, strings.Join(id, resourceParams.Separator))
+
 		if resourceParams.Priority == 1 {
+
 			// Prepend
 			add = append([]string{arg}, add...)
 			// Append
