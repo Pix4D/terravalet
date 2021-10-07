@@ -71,7 +71,7 @@ Take as input the Terraform plan `plan.txt` (explicit) and the local state `loca
 
 ```
 $ terravalet rename \
-    -plan plan.txt -up 001_TITLE.up.sh -down 001_TITLE.down.sh
+    --plan plan.txt --up 001_TITLE.up.sh --down 001_TITLE.down.sh
 ```
 
 ### Generate migration scripts: exact match, failure
@@ -80,7 +80,7 @@ Depending on _how_ the elements have been renamed in the Terraform configuration
 
 ```
 $ terravalet rename \
-    -plan plan.txt -up 001_TITLE.up.sh -down 001_TITLE.down.sh
+    --plan plan.txt --up 001_TITLE.up.sh --down 001_TITLE.down.sh
 match_exact:
 unmatched create:
   aws_route53_record.private["foo"]
@@ -98,7 +98,7 @@ If the exact match failed, it is possible to enable [q-gram distance](https://gi
 
 ```
 $ terravalet rename-fuzzy-match \
-    -plan plan.txt -up 001_TITLE.up.sh -down 001_TITLE.down.sh
+    --plan plan.txt --up 001_TITLE.up.sh --down 001_TITLE.down.sh
 WARNING fuzzy match enabled. Double-check the following matches:
  9 aws_route53_record.foo_private -> aws_route53_record.private["foo"]
 ```
@@ -163,9 +163,9 @@ the generated migration scripts will be easier to understand and portable from o
 ```
 $ cd repo
 $ terravalet move \
-    -src-plan  src/src-plan.txt  -dst-plan  dst/dst-plan.txt \
-    -src-state src/local.tfstate -dst-state dst/local.tfstate \
-    -up 001_TITLE.up.sh -down 001_TITLE.down.sh
+    --src-plan  src/src-plan.txt  --dst-plan  dst/dst-plan.txt \
+    --src-state src/local.tfstate --dst-state dst/local.tfstate \
+    --up 001_TITLE.up.sh --down 001_TITLE.down.sh
 ```
 
 ### Run the migration script
@@ -219,9 +219,9 @@ Take as input the Terraform plan in JSON format `src-plan.json` and generate UP 
 
 ```
 $ terravalet import \
-    -res-defs  my_definitions.json
-    -src-plan  src-plan.json \
-    -up import.up.sh -down import.down.sh
+    --res-defs  my_definitions.json
+    --src-plan  src-plan.json \
+    --up import.up.sh --down import.down.sh
 ```
 
 `import.up.sh ` will be generated with all the `import` flags following the plan containing `create` action.

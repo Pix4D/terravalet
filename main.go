@@ -12,8 +12,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/alexflint/go-arg"
 	"github.com/dexyk/stringosim"
-	"github.com/integrii/flaggy"
 	"github.com/scylladb/go-set"
 	"github.com/scylladb/go-set/strset"
 )
@@ -24,93 +24,68 @@ var (
 )
 
 func main() {
-	if err := run(os.Args[1:]); err != nil {
+	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(args []string) error {
-	flaggy.ResetParser() // flaggy keeps gobal state; workaround for testing :-(
-	flaggy.SetDescription("A simple valet for terraform operations")
-	flaggy.SetVersion(fullVersion)
+type args struct {
+	Rename *RenameCmd `arg:"subcommand:rename" help:"rename resources in the same root environment"`
+	Move   *MoveCmd   `arg:"subcommand:move" help:"move resources from one root environment to another"`
+	Import *ImportCmd `arg:"subcommand:import" help:"import resources generated out-of-band of Terraform"`
 
-	// Global flags
-	upPath := ""
-	downPath := ""
-	flaggy.String(&upPath, "", "up", "Path to the up migration script to generate (NNN_TITLE.up.sh).")
-	flaggy.String(&downPath, "", "down", "Path to the down migration script to generate (NNN_TITLE.down.sh).")
+	Up   string `arg:"required" help:"path of the up script to generate (NNN_TITLE.up.sh)"`
+	Down string `arg:"required" help:"path of the down script to generate (NNN_TITLE.down.sh)"`
+}
 
-	// Setup the "rename" subcommand
+func (args) Description() string {
+	return "terravalet - helps with advanced Terraform operations\n"
+}
 
-	renameCmd := flaggy.NewSubcommand("rename")
-	renameCmd.Description = "Rename resources in the same tf root environment"
-	flaggy.AttachSubcommand(renameCmd, 1)
+type RenameCmd struct {
+	PlanPath       string `arg:"--plan,required" help:"path to the terraform plan"`
+	LocalStatePath string `arg:"--local-state" help:"path to the local state to modify (both src and dst)" default:"local.tfstate"`
+	FuzzyMatch     bool   `arg:"--fuzzy-match" help:"enable q-gram distance fuzzy matching. WARNING: You must validate by hand the output!"`
+}
 
-	planPath := ""
-	localStatePath := "local.tfstate"
-	fuzzyMatch := false
+type MoveCmd struct {
+	SrcPlanPath  string `arg:"--src-plan,required" help:"path to the SRC terraform plan"`
+	DstPlanPath  string `arg:"--dst-plan,required" help:"path to the DST terraform plan"`
+	SrcStatePath string `arg:"--src-state,required" help:"path to the SRC local state to modify"`
+	DstStatePath string `arg:"--dst-state,required" help:"path to the DST local state to modify"`
+}
 
-	renameCmd.String(&planPath, "", "plan", "Path to the terraform plan.")
-	renameCmd.String(&localStatePath, "", "local-state", "Path to the local state to modify (both src and dst).")
-	renameCmd.Bool(&fuzzyMatch, "", "fuzzy-match",
-		"Enable q-gram distance fuzzy matching. WARNING: You must validate by hand the output!")
+type ImportCmd struct {
+	ResourceDefs string `arg:"--res-defs,required" help:"path to resource definitions"`
+	SrcPlanPath  string `arg:"--src-plan,required" help:"path to the SRC terraform plan in JSON format"`
+}
 
-	// Setup the "move" subcommand
+func run() error {
+	var args args
 
-	moveCmd := flaggy.NewSubcommand("move")
-	moveCmd.Description = "Move resources from one root environment to another"
-	flaggy.AttachSubcommand(moveCmd, 1)
-
-	srcPlanPath := ""
-	dstPlanPath := ""
-	srcStatePath := ""
-	dstStatePath := ""
-
-	moveCmd.String(&srcPlanPath, "", "src-plan", "Path to the SRC terraform plan")
-	moveCmd.String(&dstPlanPath, "", "dst-plan", "Path to the DST terraform plan")
-	moveCmd.String(&srcStatePath, "", "src-state", "Path to the SRC local state to modify")
-	moveCmd.String(&dstStatePath, "", "dst-state", "Path to the DST local state to modify")
-
-	// Setup the "import" subcommand
-
-	importCmd := flaggy.NewSubcommand("import")
-	importCmd.Description = "Import resources generated out-of-band of Terraform"
-	flaggy.AttachSubcommand(importCmd, 1)
-
-	resourcesDefinitions := ""
-	importCmd.String(&resourcesDefinitions, "", "res-defs", "Path to resources definitions")
-	importCmd.String(&srcPlanPath, "", "src-plan", "Path to the SRC terraform plan in json format")
-	importCmd.String(&upPath, "", "up", "Path to the resources import script to generate (import.up.sh).")
-	importCmd.String(&downPath, "", "down", "Path to the resources remove script to generate (import.down.sh).")
-
-	//
-
-	flaggy.ParseArgs(args) // This might call os.Exit() :-/
+	parser := arg.MustParse(&args)
+	if parser.Subcommand() == nil {
+		parser.Fail("missing subcommand")
+	}
 
 	switch {
-	case renameCmd.Used:
-		return doRename(upPath, downPath, planPath, localStatePath, fuzzyMatch)
-	case moveCmd.Used:
-		return doMove(upPath, downPath, srcPlanPath, dstPlanPath, srcStatePath, dstStatePath)
-	case importCmd.Used:
-		return doImport(upPath, downPath, srcPlanPath, resourcesDefinitions)
+	case args.Rename != nil:
+		return doRename(args.Up, args.Down,
+			args.Rename.PlanPath, args.Rename.LocalStatePath, args.Rename.FuzzyMatch)
+	case args.Move != nil:
+		return doMove(args.Up, args.Down,
+			args.Move.SrcPlanPath, args.Move.DstPlanPath,
+			args.Move.SrcStatePath, args.Move.DstStatePath)
+	case args.Import != nil:
+		return doImport(args.Up, args.Down,
+			args.Import.SrcPlanPath, args.Import.ResourceDefs)
 	default:
-		return fmt.Errorf("missing subcommand")
+		return fmt.Errorf("internal error: unwired command: %s", parser.SubcommandNames()[0])
 	}
 }
 
 func doRename(upPath, downPath, planPath, localStatePath string, fuzzyMatch bool) error {
-	if planPath == "" {
-		return fmt.Errorf("missing value for -plan")
-	}
-	if upPath == "" {
-		return fmt.Errorf("missing value for -up")
-	}
-	if downPath == "" {
-		return fmt.Errorf("missing value for -down")
-	}
-
 	planFile, err := os.Open(planPath)
 	if err != nil {
 		return fmt.Errorf("opening the terraform plan file: %v", err)
@@ -170,26 +145,6 @@ func doRename(upPath, downPath, planPath, localStatePath string, fuzzyMatch bool
 func doMove(upPath, downPath, srcPlanPath, dstPlanPath, srcStatePath, dstStatePath string) error {
 	// We need to read srcPlanPath and dstPlanPath, while we treat as opaque
 	// srcStatePath and dstStatePath
-
-	if srcPlanPath == "" {
-		return fmt.Errorf("missing value for -src-plan")
-	}
-	if dstPlanPath == "" {
-		return fmt.Errorf("missing value for -dst-plan")
-	}
-	if srcStatePath == "" {
-		return fmt.Errorf("missing value for -src-state")
-	}
-	if dstStatePath == "" {
-		return fmt.Errorf("missing value for -dst-state")
-	}
-	if upPath == "" {
-		return fmt.Errorf("missing value for -up")
-	}
-	if downPath == "" {
-		return fmt.Errorf("missing value for -down")
-	}
-
 	srcPlanFile, err := os.Open(srcPlanPath)
 	if err != nil {
 		return fmt.Errorf("opening the terraform plan file: %v", err)
@@ -251,20 +206,6 @@ func doMove(upPath, downPath, srcPlanPath, dstPlanPath, srcStatePath, dstStatePa
 }
 
 func doImport(upPath, downPath, srcPlanPath, resourcesDefinitions string) error {
-
-	if srcPlanPath == "" {
-		return fmt.Errorf("missing value for -src-plan")
-	}
-	if upPath == "" {
-		return fmt.Errorf("missing value for -up")
-	}
-	if downPath == "" {
-		return fmt.Errorf("missing value for -down")
-	}
-	if resourcesDefinitions == "" {
-		return fmt.Errorf("missing value for -res-defs")
-	}
-
 	definitionsFile, err := os.Open(resourcesDefinitions)
 	if err != nil {
 		return fmt.Errorf("opening the definitions file: %v", err)
