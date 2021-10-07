@@ -8,13 +8,11 @@ import (
 	"strings"
 )
 
-type Resource struct {
-	ResourceChanges []struct {
-		Res
-	} `json:"resource_changes"`
+type ResourcesBundle struct {
+	ResourceChanges []ResourceChange `json:"resource_changes"`
 }
 
-type Res struct {
+type ResourceChange struct {
 	Address      string `json:"address"`
 	Type         string `json:"type"`
 	ProviderName string `json:"provider_name"`
@@ -31,19 +29,18 @@ type Definitions struct {
 }
 
 func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
-
-	add := make([]string, 0)
-	remove := make([]string, 0)
-	configs := make(map[string]Definitions)
-	var planParsed Resource
-	var filteredResources []Res
+	var add []string
+	var remove []string
+	var configs map[string]Definitions
+	var resourcesBundle ResourcesBundle
+	var filteredResources []ResourceChange
 
 	plan, err := ioutil.ReadAll(rd)
 	if err != nil {
 		return add, remove,
 			fmt.Errorf("reading the plan file: %s", err)
 	}
-	if err = json.Unmarshal([]byte(plan), &planParsed); err != nil {
+	if err = json.Unmarshal([]byte(plan), &resourcesBundle); err != nil {
 		return add, remove,
 			fmt.Errorf("parsing the plan: %s", err)
 	}
@@ -60,13 +57,11 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 
 	// Return objects in the correct order if 'priority' parameter is set in provider configuration.
 	// The remove order is reversed (LIFO logic).
-	resources := planParsed.ResourceChanges
 
 	// Filter all "create" resources before going further
-	for _, resource := range resources {
-		action := resource.Change.Actions[0]
-		if action == "create" {
-			filteredResources = append(filteredResources, resource.Res)
+	for _, resource := range resourcesBundle.ResourceChanges {
+		if resource.Change.Actions[0] == "create" {
+			filteredResources = append(filteredResources, resource)
 		}
 	}
 
@@ -76,39 +71,35 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 	}
 
 	for _, resource := range filteredResources {
-		// Get resource address
-		a := fmt.Sprintf("'%s'", resource.Address)
-		p := resource.ProviderName
-		t := resource.Type
 		// Proceed only if type is declared in resources definitions
-		if _, ok := configs[t]; !ok {
-			msg := fmt.Sprintf("Warning: resource %s is not defined. Check %s documentation\n", t, p)
+		if _, ok := configs[resource.Type]; !ok {
+			msg := fmt.Sprintf("Warning: resource %s is not defined. Check %s documentation\n", resource.Type, resource.ProviderName)
 			fmt.Printf("\033[1;33m%s\033[0m", msg)
 			break
 		}
-		resourceParams := configs[t]
-		variables := resourceParams.Variables
+		resourceParams := configs[resource.Type]
 		var id []string
-		v := resource.Change.After.(map[string]interface{})
-		for _, field := range variables {
-			if _, ok := v[field]; !ok {
+		after := resource.Change.After.(map[string]interface{})
+		for _, field := range resourceParams.Variables {
+			if _, ok := after[field]; !ok {
 				return add, remove,
-					fmt.Errorf("error in resources definition %s: field '%s' doesn't exist in plan", t, field)
+					fmt.Errorf("error in resources definition %s: field '%s' doesn't exist in plan", resource.Type, field)
 			}
-			id = append(id, fmt.Sprintf("%s", v[field]))
+			id = append(id, fmt.Sprintf("%s", after[field]))
 		}
-		separator := resourceParams.Separator
-		arg := fmt.Sprintf("%s %s", a, strings.Join(id, separator))
+
+		resAddr := fmt.Sprintf("'%s'", resource.Address)
+		arg := fmt.Sprintf("%s %s", resAddr, strings.Join(id, resourceParams.Separator))
 		if resourceParams.Priority == 1 {
 			// Prepend
 			add = append([]string{arg}, add...)
 			// Append
-			remove = append(remove, a)
+			remove = append(remove, resAddr)
 		} else {
 			// Append
 			add = append(add, arg)
 			// Prepend
-			remove = append([]string{a}, remove...)
+			remove = append([]string{resAddr}, remove...)
 		}
 	}
 
