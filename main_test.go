@@ -13,6 +13,17 @@ import (
 	"github.com/scylladb/go-set/strset"
 )
 
+// (Ab)use the "Example" feature of the testing package to assert on the
+// output of the program. See https://pkg.go.dev/testing#hdr-Examples
+func Example_version() {
+	os.Args = []string{"terravalet", "version"}
+	if err := run(); err != nil {
+		panic(err)
+	}
+	// Output:
+	// terravalet unknown
+}
+
 func TestRunRenameSuccess(t *testing.T) {
 	testCases := []struct {
 		description  string
