@@ -14,7 +14,6 @@ import (
 
 	"github.com/dexyk/stringosim"
 	"github.com/integrii/flaggy"
-	import_resources "github.com/pix4d/terravalet/pkg/import"
 	"github.com/scylladb/go-set"
 	"github.com/scylladb/go-set/strset"
 )
@@ -290,7 +289,7 @@ func doImport(upPath, downPath, srcPlanPath, resourcesDefinitions string) error 
 	}
 	defer downFile.Close()
 
-	srcAdd, srcRemove, err := import_resources.Import(srcPlanFile, definitionsFile)
+	srcAdd, srcRemove, err := Import(srcPlanFile, definitionsFile)
 	if err != nil {
 		return fmt.Errorf("parse src-plan: %v", err)
 	}
