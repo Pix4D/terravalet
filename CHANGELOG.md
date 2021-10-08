@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v0.6.2] - (Unreleased)
 
+### Changes
+
+- Command-line parsing: replace flaggy with [go-arg](https://github.com/alexflint/go-arg).
+
 ### Fixes
 
 - Fixes a test flake due to the use of unsorted set (i.e {abcde} -> {abdcde} or {abdecde} -> {abdcde})
@@ -35,12 +39,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ```
   import - Import resources generated out-of-band of Terraform
 
-  Flags: 
+  Flags:
       -res-defs   Path to resources definitions
       -src-plan   Path to the SRC terraform plan in json format
       -up         Path to the resources import script to generate (import.up.sh).
       -down       Path to the resources remove script to generate (import.down.sh).
-
   ```
 
 ## [v0.5.0] - (2021-07-23)

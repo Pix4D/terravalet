@@ -13,6 +13,17 @@ import (
 	"github.com/scylladb/go-set/strset"
 )
 
+// (Ab)use the "Example" feature of the testing package to assert on the
+// output of the program. See https://pkg.go.dev/testing#hdr-Examples
+func Example_version() {
+	os.Args = []string{"terravalet", "version"}
+	if err := run(); err != nil {
+		panic(err)
+	}
+	// Output:
+	// terravalet unknown
+}
+
 func TestRunRenameSuccess(t *testing.T) {
 	testCases := []struct {
 		description  string
@@ -30,21 +41,21 @@ func TestRunRenameSuccess(t *testing.T) {
 		},
 		{
 			"q-gram fuzzy match simple",
-			[]string{"-fuzzy-match"},
+			[]string{"--fuzzy-match"},
 			"testdata/02_fuzzy-match.plan.txt",
 			"testdata/02_fuzzy-match.up.sh",
 			"testdata/02_fuzzy-match.down.sh",
 		},
 		{
 			"q-gram fuzzy match complicated",
-			[]string{"-fuzzy-match"},
+			[]string{"--fuzzy-match"},
 			"testdata/03_fuzzy-match.plan.txt",
 			"testdata/03_fuzzy-match.up.sh",
 			"testdata/03_fuzzy-match.down.sh",
 		},
 		{
 			"q-gram fuzzy match complicated (regression)",
-			[]string{"-fuzzy-match"},
+			[]string{"--fuzzy-match"},
 			"testdata/07_fuzzy-match.plan.txt",
 			"testdata/07_fuzzy-match.up.sh",
 			"testdata/07_fuzzy-match.down.sh",
@@ -53,7 +64,7 @@ func TestRunRenameSuccess(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			args := []string{"rename", "-plan", tc.planPath}
+			args := []string{"terravalet", "rename", "--plan", tc.planPath}
 			args = append(args, tc.options...)
 
 			runSuccess(t, args, tc.wantUpPath, tc.wantDownPath)
@@ -67,10 +78,6 @@ func TestRunRenameFailure(t *testing.T) {
 		planPath    string
 		wantError   error
 	}{
-		{"missing -plan flag",
-			"",
-			fmt.Errorf("missing value for -plan"),
-		},
 		{"plan file doesn't exist",
 			"nonexisting",
 			fmt.Errorf("opening the terraform plan file: open nonexisting: no such file or directory"),
@@ -91,7 +98,7 @@ unmatched destroy:
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			args := []string{"rename", "-plan", tc.planPath}
+			args := []string{"terravalet", "rename", "--plan", tc.planPath}
 
 			runFailure(t, args, tc.wantError)
 		})
@@ -117,9 +124,9 @@ func TestRunMoveSuccess(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			args := []string{"move",
-				"-src-plan", tc.srcPlanPath, "-dst-plan", tc.dstPlanPath,
-				"-src-state", "src-dummy", "-dst-state", "dst-dummy",
+			args := []string{"terravalet", "move",
+				"--src-plan", tc.srcPlanPath, "--dst-plan", tc.dstPlanPath,
+				"--src-state", "src-dummy", "--dst-state", "dst-dummy",
 			}
 
 			runSuccess(t, args, tc.wantUpPath, tc.wantDownPath)
@@ -161,9 +168,9 @@ func TestRunMoveFailure(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			args := []string{"move",
-				"-src-plan", tc.srcPlanPath, "-dst-plan", tc.dstPlanPath,
-				"-src-state", "src-dummy", "-dst-state", "dst-dummy",
+			args := []string{"terravalet", "move",
+				"--src-plan", tc.srcPlanPath, "--dst-plan", tc.dstPlanPath,
+				"--src-state", "src-dummy", "--dst-state", "dst-dummy",
 			}
 
 			runFailure(t, args, tc.wantError)
@@ -190,9 +197,10 @@ func runSuccess(t *testing.T, args []string, wantUpPath string, wantDownPath str
 	tmpUpPath := tmpDir + "/up"
 	tmpDownPath := tmpDir + "/down"
 
-	args = append(args, "-up", tmpUpPath, "-down", tmpDownPath)
+	args = append(args, "--up", tmpUpPath, "--down", tmpDownPath)
+	os.Args = args
 
-	if err := run(args); err != nil {
+	if err := run(); err != nil {
 		t.Fatalf("\ngot:  %q\nwant: no error", err)
 	}
 
@@ -223,9 +231,10 @@ func runFailure(t *testing.T, args []string, wantError error) {
 	tmpUpPath := tmpDir + "/up"
 	tmpDownPath := tmpDir + "/down"
 
-	args = append(args, "-up", tmpUpPath, "-down", tmpDownPath)
+	args = append(args, "--up", tmpUpPath, "--down", tmpDownPath)
+	os.Args = args
 
-	err = run(args)
+	err = run()
 
 	if err == nil {
 		t.Fatalf("\ngot:  no error\nwant: %q", err)
@@ -507,9 +516,9 @@ func TestRunImportSuccess(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			args := []string{"import",
-				"-res-defs", tc.resDefs,
-				"-src-plan", tc.srcPlanPath,
+			args := []string{"terravalet", "import",
+				"--res-defs", tc.resDefs,
+				"--src-plan", tc.srcPlanPath,
 			}
 
 			runSuccess(t, args, tc.wantUpPath, tc.wantDownPath)
@@ -563,9 +572,9 @@ func TestRunImportFailure(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			args := []string{"import",
-				"-res-defs", tc.resDefs,
-				"-src-plan", tc.srcPlanPath,
+			args := []string{"terravalet", "import",
+				"--res-defs", tc.resDefs,
+				"--src-plan", tc.srcPlanPath,
 			}
 
 			runFailure(t, args, tc.wantError)
