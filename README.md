@@ -71,7 +71,7 @@ Only one Terraform root module (and thus only one state) is involved. This actua
 ## Collect information and remote state
 
 ```
-$ cd $ROOT_MODULE_DIR
+$ cd $ROOT_MODULE
 $ terraform workspace select $WS
 $ terraform plan -no-color 2>&1 | tee plan.txt
 
@@ -134,14 +134,14 @@ Push the `local.tfstate.BACK`.
 
 # Move resources from one state to another
 
-Two Terraform root modules (and thus two states) are involved. The names of the resources stay the same, but we move them from the `$SRC_ROOT` root module to the `$DST_ROOT` root module.
+Two Terraform root modules (and thus two states) are involved. The names of the resources stay the same, but we move them from the `$SRC_ROOT_MODULE` root module to the `$DST_ROOT_MODULE` root module.
 
 ## Collect information and remote state
 
 Source root:
 
 ```
-$ cd $SRC_ROOT
+$ cd $SRC_ROOT_MODULE
 $ terraform workspace select $WS
 $ terraform plan -no-color 2>&1 | tee src-plan.txt
 
@@ -152,7 +152,7 @@ $ cp local.tfstate local.tfstate.BACK
 Destination root:
 
 ```
-$ cd $DST_ROOT
+$ cd $DST_ROOT_MODULE
 $ terraform workspace select $WS
 $ terraform plan -no-color 2>&1 | tee dst-plan.txt
 
@@ -215,47 +215,48 @@ The `terraform import` command can import existing resources into Terraform stat
 
 Thus, `terravalet import` creates the import commands for you.
 
-As with the case with the raw `terraform import`, you must describe in the Terraform configuration the resources you want to import before attempting to import it: neither `terraform` nor `terravalet` are able to write Terraform configuration, they only add to the Terraform state.
+You must first add to the Terraform configuration the resources that you want to import, and then import them: neither `terraform` nor `terravalet` are able to write Terraform configuration, they only add to the Terraform state.
 
-The examples below refers to the [Terraform GitHub provider](https://registry.terraform.io/providers/integrations/github/latest/docs), but any provider can be described.
+Since each Terraform provider introduces its own resources, it would be impossible for Terravalet to know all of them. Instead, you write a simple [resource definitions file](#writing-a-resource-definitions-file), so that Terravalet can know how to proceed.
+
+For concreteness, the examples below refer to the [Terraform GitHub provider](https://registry.terraform.io/providers/integrations/github/latest/docs).
 
 ## Generate a plan in JSON format
 
 terraform plan:
 
 ```
-$ cd $SRC_ROOT
-$ terraform plan -no-color 2>&1 -out src-plan
-$ terraform show -json src-plan | tee src-plan.json
+$ cd $ROOT_MODULE
+$ terraform plan -no-color 2>&1 -out plan.txt
+$ terraform show -json plan.txt | tee plan.json
 ```
 
 ## Generate import/remove scripts
 
-Take as input the Terraform plan in JSON format `src-plan.json` and generate UP and DOWN import scripts.
+Take as input the Terraform plan in JSON format `plan.json` and generate UP and DOWN import scripts:
 
 ```
 $ terravalet import \
-    --res-defs  my_definitions.json
-    --src-plan  src-plan.json \
+    --res-defs  my_definitions.json \
+    --src-plan  plan.json \
     --up import.up.sh --down import.down.sh
 ```
 
-`import.up.sh ` will be generated with all the `import` flags following the plan containing `create` action.
-`import.down.sh ` will be generated with all the `state rm` flags as a mirror of import above.
+## Review the scripts
+
+1. Ensure that the **parent** resources are placed at the top of the `up` script, followed by their **children**.
+2. Ensure that the **child** resources are placed at the top of the `down` script, followed by their **parents**.
+3. Ensure the correctness of parameters.
+
+NOTE: The script modifies the remote state, but it is not dangerous because it only imports new resources if they already exist and it doesn't create or destroy anything.
+
+Terraform will try to import as much as possible, if the corresponding address in state doesn't exist yet, it means it should be created later using `terraform apply`, actually the resource is in `.tf` configuration, but not yet in real world.
 
 ## Run the import script
 
-1. Review the contents of `import.up.sh `.
-   * Ensure the parents resources are placed on the top of `up` script followed by their children.
-   * Ensure the children resources are placed on the top of `down` script followed by their parents.
-   * Ensure the correctness of parameters.
-2. Run it: `sh ./import.up.sh`
-
-**1. NOTE: even if terravalet tries to guess the correct order of this action, ensure the script import first the root resource**
-
-**2. NOTE: The script modifies the remote state, but it is not dangerous because it only import new resources if they already exist and it doesn't create/destroy anything.**
-
-Terraform will try to import as much as possible, if the corresponding address in state doesn't exist yet, it means it should be created later using `terraform apply`, actually the resource is in `.tf` configuration, but not yet in real world.
+```
+sh ./import.up.sh
+```
 
 ### Example
 
@@ -279,7 +280,7 @@ Import successful!
 .....
 ```
 
-During the run an error like this can raise:
+During the run the following error can happen:
 
 ```
 Error: Cannot import non-existent remote object
@@ -309,22 +310,22 @@ In every case plan doesn't contain any `destroy` sentence.
 
 Run `import.down.sh` script that remove the same resources from terraform state that have been imported with `import.up.sh`.
 
-## Resources definition
+## Writing a resource definitions file
 
 Terravalet doesn't know anything about resources, it just parses the plan and uses the resources configuration file passed via the flag `res-defs`. An example can be found in [testdata/terravalet_imports_definitions.json](testdata/terravalet_imports_definitions.json).
 
-Basically we need to inform Terravalet where to search data to build the up/down scripts. The correct information can be found on the [specific provider documentation](https://registry.terraform.io/browse/providers). Under the hood, Terravalet matches the parsed plan and resources definition file.
+The idea is to tell Terravalet where to search the data to build the up/down scripts. The correct information can be found on the [specific provider documentation](https://registry.terraform.io/browse/providers). Under the hood, Terravalet matches the parsed plan and resources definition file.
 
-1. The json resources definition is a map of resources type objects identified by their own name as a key.
-2. The resource type object may have or not `priority`: import statement for that resource must be placed at the top of up.sh and at the bottom of down.sh (resources that must be imported before others).
-3. The resource type object may have or not `separator`: in case of multiple arguments it is mandatory and it will be used to join them. Using the example below, `tag, owner` will be joined into the string `<tag_value>:<owner_value>`.
-4. The resource type object must have `variables`: a list of fields names that are the keys in the plan to retreive the correct values building the import statement. Using the example below, terravalet will search for a keys `tag` and `owner` in terraform plan for that resource.
+1. The JSON resources definition is a map of resources type objects identified by their own name as a key.
+2. The resource type object has an optional `priority`: import statement for that resource must be placed at the top of up.sh and at the bottom of down.sh (resources that must be imported before others).
+3. The resource type object has an optional `separator`: in case of multiple arguments it is mandatory and it will be used to join them. Using the example below, `tag, owner` will be joined into the string `<tag_value>:<owner_value>`.
+4. The resource type object must have `variables`: a list of fields names that are the keys in the plan to retreive the correct values building the import statement. Using the example below, Terravalet will search for keys `tag` and `owner` in terraform plan for that resource.
 
-```
+```json
 {
   "dummy_resource1": {
     "priority": 1,
-    "separator": ":"
+    "separator": ":",
     "variables": [
       "tag",
       "owner"
