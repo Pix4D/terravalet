@@ -35,30 +35,30 @@ func TestRunRenameSuccess(t *testing.T) {
 		{
 			"exact match",
 			[]string{},
-			"testdata/01_exact-match.plan.txt",
-			"testdata/01_exact-match.up.sh",
-			"testdata/01_exact-match.down.sh",
+			"testdata/rename/01_exact-match.plan.txt",
+			"testdata/rename/01_exact-match.up.sh",
+			"testdata/rename/01_exact-match.down.sh",
 		},
 		{
 			"q-gram fuzzy match simple",
 			[]string{"--fuzzy-match"},
-			"testdata/02_fuzzy-match.plan.txt",
-			"testdata/02_fuzzy-match.up.sh",
-			"testdata/02_fuzzy-match.down.sh",
+			"testdata/rename/02_fuzzy-match.plan.txt",
+			"testdata/rename/02_fuzzy-match.up.sh",
+			"testdata/rename/02_fuzzy-match.down.sh",
 		},
 		{
 			"q-gram fuzzy match complicated",
 			[]string{"--fuzzy-match"},
-			"testdata/03_fuzzy-match.plan.txt",
-			"testdata/03_fuzzy-match.up.sh",
-			"testdata/03_fuzzy-match.down.sh",
+			"testdata/rename/03_fuzzy-match.plan.txt",
+			"testdata/rename/03_fuzzy-match.up.sh",
+			"testdata/rename/03_fuzzy-match.down.sh",
 		},
 		{
 			"q-gram fuzzy match complicated (regression)",
 			[]string{"--fuzzy-match"},
-			"testdata/07_fuzzy-match.plan.txt",
-			"testdata/07_fuzzy-match.up.sh",
-			"testdata/07_fuzzy-match.down.sh",
+			"testdata/rename/07_fuzzy-match.plan.txt",
+			"testdata/rename/07_fuzzy-match.up.sh",
+			"testdata/rename/07_fuzzy-match.down.sh",
 		},
 	}
 
@@ -83,7 +83,7 @@ func TestRunRenameFailure(t *testing.T) {
 			fmt.Errorf("opening the terraform plan file: open nonexisting: no such file or directory"),
 		},
 		{"matchExact failure",
-			"testdata/02_fuzzy-match.plan.txt",
+			"testdata/rename/02_fuzzy-match.plan.txt",
 			fmt.Errorf(`matchExact:
 unmatched create:
   aws_route53_record.localhostnames_public["artifactory"]
