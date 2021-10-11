@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 )
 
@@ -35,7 +34,7 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 	var resourcesBundle ResourcesBundle
 	var filteredResources []ResourceChange
 
-	plan, err := ioutil.ReadAll(rd)
+	plan, err := io.ReadAll(rd)
 	if err != nil {
 		return imports, removals,
 			fmt.Errorf("reading the plan file: %s", err)
@@ -45,7 +44,7 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 			fmt.Errorf("parsing the plan: %s", err)
 	}
 
-	defs, err := ioutil.ReadAll(definitionsFile)
+	defs, err := io.ReadAll(definitionsFile)
 	if err != nil {
 		return imports, removals,
 			fmt.Errorf("reading the definitions file: %s", err)
