@@ -39,7 +39,7 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 		return imports, removals,
 			fmt.Errorf("reading the plan file: %s", err)
 	}
-	if err = json.Unmarshal([]byte(plan), &resourcesBundle); err != nil {
+	if err = json.Unmarshal(plan, &resourcesBundle); err != nil {
 		return imports, removals,
 			fmt.Errorf("parsing the plan: %s", err)
 	}
@@ -49,7 +49,7 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 		return imports, removals,
 			fmt.Errorf("reading the definitions file: %s", err)
 	}
-	if err = json.Unmarshal([]byte(defs), &configs); err != nil {
+	if err = json.Unmarshal(defs, &configs); err != nil {
 		return imports, removals,
 			fmt.Errorf("parsing resources definitions: %s", err)
 	}
