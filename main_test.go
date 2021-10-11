@@ -213,12 +213,12 @@ func runSuccess(t *testing.T, args []string, wantUpPath string, wantDownPath str
 		t.Fatalf("reading tmp down file: %v", err)
 	}
 
-	if diff := cmp.Diff(tmpUp, wantUp, cmpOpt); diff != "" {
+	if diff := cmp.Diff(wantUp, tmpUp, cmpOpt); diff != "" {
 		t.Errorf("\nup script: mismatch (-want +got):\n"+
 			"(want path: %s)\n"+
 			"%s", wantUpPath, diff)
 	}
-	if diff := cmp.Diff(tmpDown, wantDown, cmpOpt); diff != "" {
+	if diff := cmp.Diff(wantDown, tmpDown, cmpOpt); diff != "" {
 		t.Errorf("\ndown script: mismatch (-want +got):\n"+
 			"(want path: %s)\n"+
 			"%s", wantDownPath, diff)
