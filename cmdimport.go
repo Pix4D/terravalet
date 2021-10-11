@@ -109,19 +109,21 @@ func Import(rd, definitionsFile io.Reader) ([]ImportElement, []ImportElement, er
 		if resourceParams.Priority == 1 {
 			// Prepend
 			imports = append([]ImportElement{elem}, imports...)
-			// Append
-			removals = append(removals, elem)
 		} else {
 			// Append
 			imports = append(imports, elem)
-			// Prepend
-			removals = append([]ImportElement{elem}, removals...)
 		}
 	}
 
 	if len(imports) == 0 {
 		return imports, removals,
 			fmt.Errorf("src-plan contains only undefined resources")
+	}
+
+	// The removals are the reverse of the imports.
+	removals = make([]ImportElement, 0, len(imports))
+	for i := len(imports) - 1; i >= 0; i-- {
+		removals = append(removals, imports[i])
 	}
 
 	return imports, removals, nil
