@@ -214,10 +214,14 @@ func runSuccess(t *testing.T, args []string, wantUpPath string, wantDownPath str
 	}
 
 	if diff := cmp.Diff(tmpUp, wantUp, cmpOpt); diff != "" {
-		t.Errorf("\nup script: mismatch (-want +got):\n%s", diff)
+		t.Errorf("\nup script: mismatch (-want +got):\n"+
+			"(want path: %s)\n"+
+			"%s", wantUpPath, diff)
 	}
 	if diff := cmp.Diff(tmpDown, wantDown, cmpOpt); diff != "" {
-		t.Errorf("\ndown script: mismatch (-want +got):\n%s", diff)
+		t.Errorf("\ndown script: mismatch (-want +got):\n"+
+			"(want path: %s)\n"+
+			"%s", wantDownPath, diff)
 	}
 }
 
