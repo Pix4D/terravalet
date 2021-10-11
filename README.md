@@ -1,11 +1,10 @@
 # Terravalet
 
-A tool to help with some [Terraform](https://www.terraform.io/) operations.
+A tool to help with advanced, low-level [Terraform](https://www.terraform.io/) operations:
 
-1. It can generate migration scripts that work also for Terraform workspaces.
-2. It can generate import and remove states script for existing resources.
-
-The idea of migrations comes from [tfmigrate](https://github.com/minamijoyo/tfmigrate). Then this blog [post](https://medium.com/@lynnlin827/moving-terraform-resources-states-from-one-remote-state-to-another-c76f8b76a996)  made me realize that `terraform state mv` had a bug and how to workaround it.
+- Rename resources within the same Terraform state, with optional fuzzy match.
+- Move resources from one Terraform state to another.
+- Import existing resources into Terraform state.
 
 **DISCLAIMER Manipulating Terraform state is inherently dangerous. It is your responsibility to be careful and ensure you UNDERSTAND what you are doing**.
 
@@ -17,7 +16,7 @@ The project follows [semantic versioning](https://semver.org/). In particular, w
 
 ## Overall approach and migration scripts
 
-The overall approach is for Terravalet to generate migration scripts, not to perform any changes directly. This for two reasons:
+The overall approach is for Terravalet to generate migration scripts, not to perform any change directly. This for two reasons:
 
 1. Safety. The operator can review the generated migration scripts for correctness.
 2. Gitops-style. The migration scripts are meant to be stored in git in the same branch (and thus same PR) that performs the Terraform changes and can optionally be hooked to an automatic deployment system.
@@ -34,28 +33,45 @@ For this reason Terravalet operates on local state and leaves to the operator to
 
 Be careful when using Terraform workspaces, since they are invisible and persistent global state :-(. Remember to always explicitly run `terraform workspace select` before anything else.
 
+## Install
+
+### Install from binary package
+
+1. Download the archive for your platform from the [releases page](https://github.com/Pix4D/terravalet/releases).
+2. Unarchive and copy the `terravalet` executable somewhere in your `$PATH`.
+
+### Install from source
+
+1. Install [Go](https://golang.org/).
+2. Install [task](https://taskfile.dev/).
+3. Run `task`:
+   ```
+   $ task test build
+   ```
+4. Copy the executable `bin/terravalet` to a directory in your `$PATH`.
+
 ## Usage
 
 There are three modes of operation:
 - [Rename resources](#rename-resources-within-the-same-state) within the same state, with optional fuzzy match.
 - [Move resources](#-move-resources-from-one-state-to-another) from one state to another.
-- [Import existing resources](#-import-existing-resources) for Terraform out-of-band resouces.
+- [Import existing resources](#-import-existing-resources) into Terraform state.
 
 they will be explained in the following sections.
 
 You can also look at the tests and in particular at the files below testdata/ for a rough idea.
 
-## Rename resources within the same state
+# Rename resources within the same state
 
 Only one Terraform root module (and thus only one state) is involved. This actually covers two different use cases:
 
 1. Renaming resources within the same root module.
 2. Moving resources to/from a non-root Terraform module (this will actually _rename_ the resources, since they will get or loose the `module.` prefix).
 
-### Collect information and remote state
+## Collect information and remote state
 
 ```
-$ cd $ROOT_MODULE_DIR
+$ cd $ROOT_MODULE
 $ terraform workspace select $WS
 $ terraform plan -no-color 2>&1 | tee plan.txt
 
@@ -65,7 +81,7 @@ $ cp local.tfstate local.tfstate.BACK
 
 The backup is needed to recover in case of errors. It must be done now.
 
-### Generate migration scripts: exact match, success
+## Generate migration scripts: exact match, success
 
 Take as input the Terraform plan `plan.txt` (explicit) and the local state `local.tfstate` (implicit) and generate UP and DOWN migration scripts:
 
@@ -74,7 +90,7 @@ $ terravalet rename \
     --plan plan.txt --up 001_TITLE.up.sh --down 001_TITLE.down.sh
 ```
 
-### Generate migration scripts: exact match, failure
+## Generate migration scripts: exact match, failure
 
 Depending on _how_ the elements have been renamed in the Terraform configuration, it is possible that the exact match will fail:
 
@@ -90,7 +106,7 @@ unmatched destroy:
 
 In this case, you can attempt fuzzy matching.
 
-### Generate migration scripts: fuzzy match
+## Generate migration scripts: fuzzy match
 
 **WARNING** Fuzzy match can make mistakes. It is up to you to validate that the migration makes sense.
 
@@ -103,29 +119,29 @@ WARNING fuzzy match enabled. Double-check the following matches:
  9 aws_route53_record.foo_private -> aws_route53_record.private["foo"]
 ```
 
-### Run the migration script
+## Run the migration script
 
 1. Review the contents of `001_TITLE.up.sh`.
 2. Run it: `sh ./001_TITLE.up.sh`
 
-### Push the migrated state
+## Push the migrated state
 
 1. `terraform state push local.tfstate`. In case of error, DO NOT FORCE the push unless you understand very well what you are doing.
 
-### Recovery in case of error
+## Recovery in case of error
 
 Push the `local.tfstate.BACK`.
 
-## Move resources from one state to another
+# Move resources from one state to another
 
-Two Terraform root modules (and thus two states) are involved. The names of the resources stay the same, but we move them from the `$SRC_ROOT` root module to the `$DST_ROOT` root module.
+Two Terraform root modules (and thus two states) are involved. The names of the resources stay the same, but we move them from the `$SRC_ROOT_MODULE` root module to the `$DST_ROOT_MODULE` root module.
 
-### Collect information and remote state
+## Collect information and remote state
 
 Source root:
 
 ```
-$ cd $SRC_ROOT
+$ cd $SRC_ROOT_MODULE
 $ terraform workspace select $WS
 $ terraform plan -no-color 2>&1 | tee src-plan.txt
 
@@ -136,7 +152,7 @@ $ cp local.tfstate local.tfstate.BACK
 Destination root:
 
 ```
-$ cd $DST_ROOT
+$ cd $DST_ROOT_MODULE
 $ terraform workspace select $WS
 $ terraform plan -no-color 2>&1 | tee dst-plan.txt
 
@@ -146,7 +162,7 @@ $ cp local.tfstate local.tfstate.BACK
 
 The backups are needed to recover in case of errors. They must be done now.
 
-### Generate migration scripts
+## Generate migration scripts
 
 Take as input the two Terraform plans `src-plan.txt`, `dst-plan.txt`, the two local state files in the corresponding directories and generate UP and DOWN migration scripts.
 
@@ -168,12 +184,12 @@ $ terravalet move \
     --up 001_TITLE.up.sh --down 001_TITLE.down.sh
 ```
 
-### Run the migration script
+## Run the migration script
 
 1. Review the contents of `001_TITLE.up.sh`.
 2. Run it: `sh ./001_TITLE.up.sh`
 
-### Push the migrated states
+## Push the migrated states
 
 In case of error, DO NOT FORCE the push unless you understand very well what you are doing.
 
@@ -189,59 +205,60 @@ $ cd dst
 $ terraform state push local.tfstate
 ```
 
-### Recovery in case of error
+## Recovery in case of error
 
 Push the two backups `src/local.tfstate.BACK` and `dst/local.tfstate.BACK`.
 
-## Import existing resources
+# Import existing resources
 
 The `terraform import` command can import existing resources into Terraform state, but requires to painstakingly write by hand the arguments, one per resource. This is error-prone and tedious.
 
 Thus, `terravalet import` creates the import commands for you.
 
-As with the case with the raw `terraform import`, you must describe in the Terraform configuration the resources you want to import before attempting to import it: neither `terraform` nor `terravalet` are able to write Terraform configuration, they only add to the Terraform state.
+You must first add to the Terraform configuration the resources that you want to import, and then import them: neither `terraform` nor `terravalet` are able to write Terraform configuration, they only add to the Terraform state.
 
-The examples below refers to the [Terraform GitHub provider](https://registry.terraform.io/providers/integrations/github/latest/docs), but any provider can be described.
+Since each Terraform provider introduces its own resources, it would be impossible for Terravalet to know all of them. Instead, you write a simple [resource definitions file](#writing-a-resource-definitions-file), so that Terravalet can know how to proceed.
 
-### Generate a plan in JSON format
+For concreteness, the examples below refer to the [Terraform GitHub provider](https://registry.terraform.io/providers/integrations/github/latest/docs).
+
+## Generate a plan in JSON format
 
 terraform plan:
 
 ```
-$ cd $SRC_ROOT
-$ terraform plan -no-color 2>&1 -out src-plan
-$ terraform show -json src-plan | tee src-plan.json
+$ cd $ROOT_MODULE
+$ terraform plan -no-color 2>&1 -out plan.txt
+$ terraform show -json plan.txt | tee plan.json
 ```
 
-### Generate import/remove scripts
+## Generate import/remove scripts
 
-Take as input the Terraform plan in JSON format `src-plan.json` and generate UP and DOWN import scripts.
+Take as input the Terraform plan in JSON format `plan.json` and generate UP and DOWN import scripts:
 
 ```
 $ terravalet import \
-    --res-defs  my_definitions.json
-    --src-plan  src-plan.json \
+    --res-defs  my_definitions.json \
+    --src-plan  plan.json \
     --up import.up.sh --down import.down.sh
 ```
 
-`import.up.sh ` will be generated with all the `import` flags following the plan containing `create` action.
-`import.down.sh ` will be generated with all the `state rm` flags as a mirror of import above.
+## Review the scripts
 
-### Run the import script
+1. Ensure that the **parent** resources are placed at the top of the `up` script, followed by their **children**.
+2. Ensure that the **child** resources are placed at the top of the `down` script, followed by their **parents**.
+3. Ensure the correctness of parameters.
 
-1. Review the contents of `import.up.sh `.
-   * Ensure the parents resources are placed on the top of `up` script followed by their children.
-   * Ensure the children resources are placed on the top of `down` script followed by their parents.
-   * Ensure the correctness of parameters.
-2. Run it: `sh ./import.up.sh`
-
-**1. NOTE: even if terravalet tries to guess the correct order of this action, ensure the script import first the root resource**
-
-**2. NOTE: The script modifies the remote state, but it is not dangerous because it only import new resources if they already exist and it doesn't create/destroy anything.**
+NOTE: The script modifies the remote state, but it is not dangerous because it only imports new resources if they already exist and it doesn't create or destroy anything.
 
 Terraform will try to import as much as possible, if the corresponding address in state doesn't exist yet, it means it should be created later using `terraform apply`, actually the resource is in `.tf` configuration, but not yet in real world.
 
-#### Example
+## Run the import script
+
+```
+sh ./import.up.sh
+```
+
+### Example
 
 Here is a new plan, scripts have been already generated:
 
@@ -263,7 +280,7 @@ Import successful!
 .....
 ```
 
-During the run an error like this can raise:
+During the run the following error can happen:
 
 ```
 Error: Cannot import non-existent remote object
@@ -289,26 +306,26 @@ Plan: 3 to add, 2 to change, 0 to destroy.
 In conclusion, the plan now is close to real resources states and terraform is now aware of them.
 In every case plan doesn't contain any `destroy` sentence.
 
-### Rollback
+## Rollback
 
 Run `import.down.sh` script that remove the same resources from terraform state that have been imported with `import.up.sh`.
 
-### Resources definition
+## Writing a resource definitions file
 
-Terravalet doesn't know anything about resources, it just parses the plan and uses the resources configuration file passed via the flag `res-defs`. An example can be found in [testdata](testdata/terravalet_imports_definitions.json) containing some github resources as example.
+Terravalet doesn't know anything about resources, it just parses the plan and uses the resources configuration file passed via the flag `res-defs`. An example can be found in [testdata/terravalet_imports_definitions.json](testdata/terravalet_imports_definitions.json).
 
-Basically we need to inform Terravalet where to search data to build the up/down scripts. The correct information can be found on the [specific provider documentation](https://registry.terraform.io/browse/providers). Under the hood, Terravalet matches the parsed plan and resources definition file.
+The idea is to tell Terravalet where to search the data to build the up/down scripts. The correct information can be found on the [specific provider documentation](https://registry.terraform.io/browse/providers). Under the hood, Terravalet matches the parsed plan and resources definition file.
 
-1. The json resources definition is a map of resources type objects identified by their own name as a key.
-2. The resource type object may have or not `priority`: import statement for that resource must be placed at the top of up.sh and at the bottom of down.sh (resources that must be imported before others).
-3. The resource type object may have or not `separator`: in case of multiple arguments it is mandatory and it will be used to join them. Using the example below, `tag, owner` will be joined into the string `<tag_value>:<owner_value>`.
-4. The resource type object must have `variables`: a list of fields names that are the keys in the plan to retreive the correct values building the import statement. Using the example below, terravalet will search for a keys `tag` and `owner` in terraform plan for that resource.
+1. The JSON resources definition is a map of resources type objects identified by their own name as a key.
+2. The resource type object has an optional `priority`: import statement for that resource must be placed at the top of up.sh and at the bottom of down.sh (resources that must be imported before others).
+3. The resource type object has an optional `separator`: in case of multiple arguments it is mandatory and it will be used to join them. Using the example below, `tag, owner` will be joined into the string `<tag_value>:<owner_value>`.
+4. The resource type object must have `variables`: a list of fields names that are the keys in the plan to retreive the correct values building the import statement. Using the example below, Terravalet will search for keys `tag` and `owner` in terraform plan for that resource.
 
-```
+```json
 {
   "dummy_resource1": {
     "priority": 1,
-    "separator": ":"
+    "separator": ":",
     "variables": [
       "tag",
       "owner"
@@ -317,35 +334,18 @@ Basically we need to inform Terravalet where to search data to build the up/down
 }
 ```
 
-### Error cases
+## Error cases
 
 Ignorable errors:
 1. Resource X doesn't exists yet, it resides only in new terraform configuration.
 2. Resource X exists, but depends on resource Y that has not been imported yet (should be fine setting the priority)
 
-NOT ignorable errors: 
+NOT ignorable errors:
 1. Provider specific argument ID is wrong
 
-## Install
+# Making a release
 
-### Install from binary package
-
-1. Download the archive for your platform from the [releases page](https://github.com/Pix4D/terravalet/releases).
-2. Unarchive and copy the `terravalet` executable somewhere in your `$PATH`.
-
-### Install from source
-
-1. Install [Go](https://golang.org/).
-2. Install [task](https://taskfile.dev/).
-3. Run `task`
-   ```
-   $ task
-   ```
-4. Copy the executable `bin/terravalet` to a directory in your `$PATH`.
-
-## Making a release
-
-### Setup
+## Setup
 
 1. Install [github-release](https://github.com/github-release/github-release).
 2. Install [gopass](https://github.com/gopasspw/gopass) or equivalent.
@@ -358,7 +358,7 @@ NOT ignorable errors:
    $ gopass insert gh/terravalet/GITHUB_TOKEN
    ```
 
-### Each time
+## Each time
 
 1. Update [CHANGELOG](CHANGELOG.md)
 2. Update this README and/or additional documentation.
@@ -370,6 +370,10 @@ NOT ignorable errors:
 5. Finish the release process by following the instructions printed by `task` above.
 6. To recover from a half-baked release, see the hints in the [Taskfile](Taskfile.yml).
 
-## License
+# History and credits
+
+The idea of migrations comes from [tfmigrate](https://github.com/minamijoyo/tfmigrate). Then this blog [post](https://medium.com/@lynnlin827/moving-terraform-resources-states-from-one-remote-state-to-another-c76f8b76a996)  made me realize that `terraform state mv` had a bug and how to workaround it.
+
+# License
 
 This code is released under the MIT license, see file [LICENSE](LICENSE).
