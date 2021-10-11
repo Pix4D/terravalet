@@ -312,7 +312,7 @@ Run `import.down.sh` script that remove the same resources from terraform state 
 
 ## Writing a resource definitions file
 
-Terravalet doesn't know anything about resources, it just parses the plan and uses the resources configuration file passed via the flag `res-defs`. An example can be found in [testdata/terravalet_imports_definitions.json](testdata/terravalet_imports_definitions.json).
+Terravalet doesn't know anything about resources, it just parses the plan and uses the resources configuration file passed via the flag `res-defs`. An example can be found in [testdata/import/terravalet_imports_definitions.json](testdata/import/terravalet_imports_definitions.json).
 
 The idea is to tell Terravalet where to search the data to build the up/down scripts. The correct information can be found on the [specific provider documentation](https://registry.terraform.io/browse/providers). Under the hood, Terravalet matches the parsed plan and resources definition file.
 
