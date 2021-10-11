@@ -239,15 +239,15 @@ func doImport(upPath, downPath, srcPlanPath, resourcesDefinitions string) error 
 	}
 	defer downFile.Close()
 
-	srcAdd, srcRemove, err := Import(srcPlanFile, definitionsFile)
+	imports, removals, err := Import(srcPlanFile, definitionsFile)
 	if err != nil {
 		return fmt.Errorf("parse src-plan: %v", err)
 	}
 
-	if err := resourceScript(srcAdd, "import", upFile); err != nil {
+	if err := resourceScript(imports, "import", upFile); err != nil {
 		return fmt.Errorf("writing the up script: %v", err)
 	}
-	if err := resourceScript(srcRemove, "state rm", downFile); err != nil {
+	if err := resourceScript(removals, "state rm", downFile); err != nil {
 		return fmt.Errorf("writing the down script: %v", err)
 	}
 

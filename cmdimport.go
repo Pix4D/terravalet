@@ -29,29 +29,29 @@ type Definitions struct {
 }
 
 func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
-	var add []string
-	var remove []string
+	var imports []string
+	var removals []string
 	var configs map[string]Definitions
 	var resourcesBundle ResourcesBundle
 	var filteredResources []ResourceChange
 
 	plan, err := ioutil.ReadAll(rd)
 	if err != nil {
-		return add, remove,
+		return imports, removals,
 			fmt.Errorf("reading the plan file: %s", err)
 	}
 	if err = json.Unmarshal([]byte(plan), &resourcesBundle); err != nil {
-		return add, remove,
+		return imports, removals,
 			fmt.Errorf("parsing the plan: %s", err)
 	}
 
 	defs, err := ioutil.ReadAll(definitionsFile)
 	if err != nil {
-		return add, remove,
+		return imports, removals,
 			fmt.Errorf("reading the definitions file: %s", err)
 	}
 	if err = json.Unmarshal([]byte(defs), &configs); err != nil {
-		return add, remove,
+		return imports, removals,
 			fmt.Errorf("parsing resources definitions: %s", err)
 	}
 
@@ -66,7 +66,7 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 	}
 
 	if len(filteredResources) == 0 {
-		return add, remove,
+		return imports, removals,
 			fmt.Errorf("src-plan doesn't contains resources to create")
 	}
 
@@ -82,7 +82,7 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 		after := resource.Change.After.(map[string]interface{})
 		for _, field := range resourceParams.Variables {
 			if _, ok := after[field]; !ok {
-				return add, remove,
+				return imports, removals,
 					fmt.Errorf("error in resources definition %s: field '%s' doesn't exist in plan", resource.Type, field)
 			}
 			id = append(id, fmt.Sprintf("%s", after[field]))
@@ -92,21 +92,21 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 		arg := fmt.Sprintf("%s %s", resAddr, strings.Join(id, resourceParams.Separator))
 		if resourceParams.Priority == 1 {
 			// Prepend
-			add = append([]string{arg}, add...)
+			imports = append([]string{arg}, imports...)
 			// Append
-			remove = append(remove, resAddr)
+			removals = append(removals, resAddr)
 		} else {
 			// Append
-			add = append(add, arg)
+			imports = append(imports, arg)
 			// Prepend
-			remove = append([]string{resAddr}, remove...)
+			removals = append([]string{resAddr}, removals...)
 		}
 	}
 
-	if len(add) == 0 {
-		return add, remove,
+	if len(imports) == 0 {
+		return imports, removals,
 			fmt.Errorf("src-plan contains only undefined resources")
 	}
 
-	return add, remove, nil
+	return imports, removals, nil
 }
