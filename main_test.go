@@ -201,7 +201,7 @@ func runSuccess(t *testing.T, args []string, wantUpPath string, wantDownPath str
 	os.Args = args
 
 	if err := run(); err != nil {
-		t.Fatalf("\ngot:  %q\nwant: no error", err)
+		t.Fatalf("run: args: %s\ngot:  %q\nwant: no error", args, err)
 	}
 
 	tmpUp, err := ioutil.ReadFile(tmpUpPath)
@@ -235,12 +235,11 @@ func runFailure(t *testing.T, args []string, wantError error) {
 	os.Args = args
 
 	err = run()
-
 	if err == nil {
-		t.Fatalf("\ngot:  no error\nwant: %q", err)
+		t.Fatalf("run: args: %s\ngot:  no error\nwant: %q", args, err)
 	}
 	if err.Error() != wantError.Error() {
-		t.Fatalf("\ngot:  %q\nwant: %q", err, wantError)
+		t.Fatalf("run: args: %s\ngot:  %q\nwant: %q", args, err, wantError)
 	}
 }
 
