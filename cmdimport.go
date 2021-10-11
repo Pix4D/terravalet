@@ -27,9 +27,19 @@ type Definitions struct {
 	Variables []string `json:"variables"`
 }
 
-func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
-	var imports []string
-	var removals []string
+// Keep track of the asymmetry of import subcommand.
+// When importing, the up direction wants two parameters:
+//   terraform import res-address res-id
+// while the down direction wants only one parameter:
+//   terraform state rm res-address
+type ImportElement struct {
+	Addr string
+	ID   string
+}
+
+func Import(rd, definitionsFile io.Reader) ([]ImportElement, []ImportElement, error) {
+	var imports []ImportElement
+	var removals []ImportElement
 	var configs map[string]Definitions
 	var resourcesBundle ResourcesBundle
 	var filteredResources []ResourceChange
@@ -77,28 +87,35 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 			break
 		}
 		resourceParams := configs[resource.Type]
-		var id []string
+		var resID []string
 		after := resource.Change.After.(map[string]interface{})
 		for _, field := range resourceParams.Variables {
 			if _, ok := after[field]; !ok {
 				return imports, removals,
 					fmt.Errorf("error in resources definition %s: field '%s' doesn't exist in plan", resource.Type, field)
 			}
-			id = append(id, fmt.Sprintf("%s", after[field]))
+			subID, ok := after[field].(string)
+			if !ok {
+				return imports, removals,
+					fmt.Errorf("resource_changes:after:%s: type is %T; want: string", field, after[field])
+			}
+			resID = append(resID, subID)
 		}
 
-		resAddr := fmt.Sprintf("'%s'", resource.Address)
-		arg := fmt.Sprintf("%s %s", resAddr, strings.Join(id, resourceParams.Separator))
+		elem := ImportElement{
+			Addr: resource.Address,
+			ID:   strings.Join(resID, resourceParams.Separator)}
+
 		if resourceParams.Priority == 1 {
 			// Prepend
-			imports = append([]string{arg}, imports...)
+			imports = append([]ImportElement{elem}, imports...)
 			// Append
-			removals = append(removals, resAddr)
+			removals = append(removals, elem)
 		} else {
 			// Append
-			imports = append(imports, arg)
+			imports = append(imports, elem)
 			// Prepend
-			removals = append([]string{resAddr}, removals...)
+			removals = append([]ImportElement{elem}, removals...)
 		}
 	}
 
