@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 )
 
@@ -28,30 +27,40 @@ type Definitions struct {
 	Variables []string `json:"variables"`
 }
 
-func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
-	var add []string
-	var remove []string
+// Keep track of the asymmetry of import subcommand.
+// When importing, the up direction wants two parameters:
+//   terraform import res-address res-id
+// while the down direction wants only one parameter:
+//   terraform state rm res-address
+type ImportElement struct {
+	Addr string
+	ID   string
+}
+
+func Import(rd, definitionsFile io.Reader) ([]ImportElement, []ImportElement, error) {
+	var imports []ImportElement
+	var removals []ImportElement
 	var configs map[string]Definitions
 	var resourcesBundle ResourcesBundle
 	var filteredResources []ResourceChange
 
-	plan, err := ioutil.ReadAll(rd)
+	plan, err := io.ReadAll(rd)
 	if err != nil {
-		return add, remove,
+		return imports, removals,
 			fmt.Errorf("reading the plan file: %s", err)
 	}
-	if err = json.Unmarshal([]byte(plan), &resourcesBundle); err != nil {
-		return add, remove,
+	if err = json.Unmarshal(plan, &resourcesBundle); err != nil {
+		return imports, removals,
 			fmt.Errorf("parsing the plan: %s", err)
 	}
 
-	defs, err := ioutil.ReadAll(definitionsFile)
+	defs, err := io.ReadAll(definitionsFile)
 	if err != nil {
-		return add, remove,
+		return imports, removals,
 			fmt.Errorf("reading the definitions file: %s", err)
 	}
-	if err = json.Unmarshal([]byte(defs), &configs); err != nil {
-		return add, remove,
+	if err = json.Unmarshal(defs, &configs); err != nil {
+		return imports, removals,
 			fmt.Errorf("parsing resources definitions: %s", err)
 	}
 
@@ -66,7 +75,7 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 	}
 
 	if len(filteredResources) == 0 {
-		return add, remove,
+		return imports, removals,
 			fmt.Errorf("src-plan doesn't contains resources to create")
 	}
 
@@ -78,35 +87,44 @@ func Import(rd, definitionsFile io.Reader) ([]string, []string, error) {
 			break
 		}
 		resourceParams := configs[resource.Type]
-		var id []string
+		var resID []string
 		after := resource.Change.After.(map[string]interface{})
 		for _, field := range resourceParams.Variables {
 			if _, ok := after[field]; !ok {
-				return add, remove,
+				return imports, removals,
 					fmt.Errorf("error in resources definition %s: field '%s' doesn't exist in plan", resource.Type, field)
 			}
-			id = append(id, fmt.Sprintf("%s", after[field]))
+			subID, ok := after[field].(string)
+			if !ok {
+				return imports, removals,
+					fmt.Errorf("resource_changes:after:%s: type is %T; want: string", field, after[field])
+			}
+			resID = append(resID, subID)
 		}
 
-		resAddr := fmt.Sprintf("'%s'", resource.Address)
-		arg := fmt.Sprintf("%s %s", resAddr, strings.Join(id, resourceParams.Separator))
+		elem := ImportElement{
+			Addr: resource.Address,
+			ID:   strings.Join(resID, resourceParams.Separator)}
+
 		if resourceParams.Priority == 1 {
 			// Prepend
-			add = append([]string{arg}, add...)
-			// Append
-			remove = append(remove, resAddr)
+			imports = append([]ImportElement{elem}, imports...)
 		} else {
 			// Append
-			add = append(add, arg)
-			// Prepend
-			remove = append([]string{resAddr}, remove...)
+			imports = append(imports, elem)
 		}
 	}
 
-	if len(add) == 0 {
-		return add, remove,
+	if len(imports) == 0 {
+		return imports, removals,
 			fmt.Errorf("src-plan contains only undefined resources")
 	}
 
-	return add, remove, nil
+	// The removals are the reverse of the imports.
+	removals = make([]ImportElement, 0, len(imports))
+	for i := len(imports) - 1; i >= 0; i-- {
+		removals = append(removals, imports[i])
+	}
+
+	return imports, removals, nil
 }

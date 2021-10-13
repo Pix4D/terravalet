@@ -35,30 +35,30 @@ func TestRunRenameSuccess(t *testing.T) {
 		{
 			"exact match",
 			[]string{},
-			"testdata/01_exact-match.plan.txt",
-			"testdata/01_exact-match.up.sh",
-			"testdata/01_exact-match.down.sh",
+			"testdata/rename/01_exact-match.plan.txt",
+			"testdata/rename/01_exact-match.up.sh",
+			"testdata/rename/01_exact-match.down.sh",
 		},
 		{
 			"q-gram fuzzy match simple",
 			[]string{"--fuzzy-match"},
-			"testdata/02_fuzzy-match.plan.txt",
-			"testdata/02_fuzzy-match.up.sh",
-			"testdata/02_fuzzy-match.down.sh",
+			"testdata/rename/02_fuzzy-match.plan.txt",
+			"testdata/rename/02_fuzzy-match.up.sh",
+			"testdata/rename/02_fuzzy-match.down.sh",
 		},
 		{
 			"q-gram fuzzy match complicated",
 			[]string{"--fuzzy-match"},
-			"testdata/03_fuzzy-match.plan.txt",
-			"testdata/03_fuzzy-match.up.sh",
-			"testdata/03_fuzzy-match.down.sh",
+			"testdata/rename/03_fuzzy-match.plan.txt",
+			"testdata/rename/03_fuzzy-match.up.sh",
+			"testdata/rename/03_fuzzy-match.down.sh",
 		},
 		{
 			"q-gram fuzzy match complicated (regression)",
 			[]string{"--fuzzy-match"},
-			"testdata/07_fuzzy-match.plan.txt",
-			"testdata/07_fuzzy-match.up.sh",
-			"testdata/07_fuzzy-match.down.sh",
+			"testdata/rename/07_fuzzy-match.plan.txt",
+			"testdata/rename/07_fuzzy-match.up.sh",
+			"testdata/rename/07_fuzzy-match.down.sh",
 		},
 	}
 
@@ -83,7 +83,7 @@ func TestRunRenameFailure(t *testing.T) {
 			fmt.Errorf("opening the terraform plan file: open nonexisting: no such file or directory"),
 		},
 		{"matchExact failure",
-			"testdata/02_fuzzy-match.plan.txt",
+			"testdata/rename/02_fuzzy-match.plan.txt",
 			fmt.Errorf(`matchExact:
 unmatched create:
   aws_route53_record.localhostnames_public["artifactory"]
@@ -115,10 +115,10 @@ func TestRunMoveSuccess(t *testing.T) {
 	}{
 		{
 			"exact match",
-			"testdata/04_src-plan.txt",
-			"testdata/04_dst-plan.txt",
-			"testdata/04_up.sh",
-			"testdata/04_down.sh",
+			"testdata/move/04_src-plan.txt",
+			"testdata/move/04_dst-plan.txt",
+			"testdata/move/04_up.sh",
+			"testdata/move/04_down.sh",
 		},
 	}
 
@@ -151,15 +151,15 @@ func TestRunMoveFailure(t *testing.T) {
 			fmt.Errorf("opening the terraform plan file: open src-plan-path-dummy: no such file or directory"),
 		},
 		{"src-plan must only destroy",
-			"testdata/05_src-plan.txt",
-			"testdata/05_dst-plan.txt",
+			"testdata/move/05_src-plan.txt",
+			"testdata/move/05_dst-plan.txt",
 			"want-up-path-dummy",
 			"want-down-path-dummy",
 			fmt.Errorf("src-plan contains resources to create: [aws_batch_job_definition.foo]"),
 		},
 		{"dst-plan must only create",
-			"testdata/06_src-plan.txt",
-			"testdata/06_dst-plan.txt",
+			"testdata/move/06_src-plan.txt",
+			"testdata/move/06_dst-plan.txt",
 			"want-up-path-dummy",
 			"want-down-path-dummy",
 			fmt.Errorf("dst-plan contains resources to destroy: [aws_batch_job_definition.foo]"),
@@ -201,7 +201,7 @@ func runSuccess(t *testing.T, args []string, wantUpPath string, wantDownPath str
 	os.Args = args
 
 	if err := run(); err != nil {
-		t.Fatalf("\ngot:  %q\nwant: no error", err)
+		t.Fatalf("run: args: %s\ngot:  %q\nwant: no error", args, err)
 	}
 
 	tmpUp, err := ioutil.ReadFile(tmpUpPath)
@@ -213,11 +213,15 @@ func runSuccess(t *testing.T, args []string, wantUpPath string, wantDownPath str
 		t.Fatalf("reading tmp down file: %v", err)
 	}
 
-	if diff := cmp.Diff(tmpUp, wantUp, cmpOpt); diff != "" {
-		t.Errorf("\nup script: mismatch (-want +got):\n%s", diff)
+	if diff := cmp.Diff(wantUp, tmpUp, cmpOpt); diff != "" {
+		t.Errorf("\nup script: mismatch (-want +got):\n"+
+			"(want path: %s)\n"+
+			"%s", wantUpPath, diff)
 	}
-	if diff := cmp.Diff(tmpDown, wantDown, cmpOpt); diff != "" {
-		t.Errorf("\ndown script: mismatch (-want +got):\n%s", diff)
+	if diff := cmp.Diff(wantDown, tmpDown, cmpOpt); diff != "" {
+		t.Errorf("\ndown script: mismatch (-want +got):\n"+
+			"(want path: %s)\n"+
+			"%s", wantDownPath, diff)
 	}
 }
 
@@ -235,12 +239,11 @@ func runFailure(t *testing.T, args []string, wantError error) {
 	os.Args = args
 
 	err = run()
-
 	if err == nil {
-		t.Fatalf("\ngot:  no error\nwant: %q", err)
+		t.Fatalf("run: args: %s\ngot:  no error\nwant: %q", args, err)
 	}
 	if err.Error() != wantError.Error() {
-		t.Fatalf("\ngot:  %q\nwant: %q", err, wantError)
+		t.Fatalf("run: args: %s\ngot:  %q\nwant: %q", args, err, wantError)
 	}
 }
 
@@ -507,10 +510,10 @@ func TestRunImportSuccess(t *testing.T) {
 	}{
 		{
 			"import resources",
-			"testdata/terravalet_imports_definitions.json",
-			"testdata/08_import_src-plan.json",
-			"testdata/08_import_up.sh",
-			"testdata/08_import_down.sh",
+			"testdata/import/terravalet_imports_definitions.json",
+			"testdata/import/08_import_src-plan.json",
+			"testdata/import/08_import_up.sh",
+			"testdata/import/08_import_down.sh",
 		},
 	}
 
@@ -534,38 +537,38 @@ func TestRunImportFailure(t *testing.T) {
 		wantError   error
 	}{
 		{"non existing src-plan",
-			"testdata/terravalet_imports_definitions.json",
+			"testdata/import/terravalet_imports_definitions.json",
 			"src-plan-path-dummy",
 			fmt.Errorf("opening the terraform plan file: open src-plan-path-dummy: no such file or directory"),
 		},
 		{"src-plan is invalid json",
-			"testdata/terravalet_imports_definitions.json",
-			"testdata/09_import_empty_src-plan.json",
+			"testdata/import/terravalet_imports_definitions.json",
+			"testdata/import/09_import_empty_src-plan.json",
 			fmt.Errorf("parse src-plan: parsing the plan: unexpected end of JSON input"),
 		},
 		{"src-plan must create resource",
-			"testdata/terravalet_imports_definitions.json",
-			"testdata/10_import_no-new-resources.json",
+			"testdata/import/terravalet_imports_definitions.json",
+			"testdata/import/10_import_no-new-resources.json",
 			fmt.Errorf("parse src-plan: src-plan doesn't contains resources to create"),
 		},
 		{"src-plan contains only undefined resources",
-			"testdata/terravalet_imports_definitions.json",
-			"testdata/11_import_src-plan_undefined_resources.json",
+			"testdata/import/terravalet_imports_definitions.json",
+			"testdata/import/11_import_src-plan_undefined_resources.json",
 			fmt.Errorf("parse src-plan: src-plan contains only undefined resources"),
 		},
 		{"src-plan contains a not existing resource parameter",
-			"testdata/terravalet_imports_definitions.json",
-			"testdata/12_import_src-plan_invalid_resource_param.json",
+			"testdata/import/terravalet_imports_definitions.json",
+			"testdata/import/12_import_src-plan_invalid_resource_param.json",
 			fmt.Errorf("parse src-plan: error in resources definition dummy_resource2: field 'long_name' doesn't exist in plan"),
 		},
 		{"terravalet missing resources definitions file",
-			"testdata/missing.file",
-			"testdata/08_import_src-plan.json",
-			fmt.Errorf("opening the definitions file: open testdata/missing.file: no such file or directory"),
+			"testdata/import/missing.file",
+			"testdata/import/08_import_src-plan.json",
+			fmt.Errorf("opening the definitions file: open testdata/import/missing.file: no such file or directory"),
 		},
 		{"terravalet invalid resources definitions file",
-			"testdata/invalid_imports_definitions.json",
-			"testdata/08_import_src-plan.json",
+			"testdata/import/invalid_imports_definitions.json",
+			"testdata/import/08_import_src-plan.json",
 			fmt.Errorf("parse src-plan: parsing resources definitions: invalid character '}' after object key"),
 		},
 	}
