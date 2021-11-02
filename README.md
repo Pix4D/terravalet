@@ -113,7 +113,7 @@ In this case, you can attempt fuzzy matching.
 If the exact match failed, it is possible to enable [q-gram distance](https://github.com/dexyk/stringosim) fuzzy matching with the `-fuzzy-match` flag:
 
 ```
-$ terravalet rename-fuzzy-match \
+$ terravalet rename -fuzzy-match \
     --plan plan.txt --up 001_TITLE.up.sh --down 001_TITLE.down.sh
 WARNING fuzzy match enabled. Double-check the following matches:
  9 aws_route53_record.foo_private -> aws_route53_record.private["foo"]
