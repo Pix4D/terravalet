@@ -1,45 +1,54 @@
-# See https://taskfile.dev for more information.
-# Based on https://github.com/marco-m/timeit/blob/master/Taskfile.yml
+# Install `task` from https://taskfile.dev
+# Run `task --list` to start.
 
 version: '3'
 
+vars:
+  GOTESTSUM:
+    sh: "echo $(which gotestsum 2> /dev/null)"
+  TESTRUNNER: "{{if .GOTESTSUM}}{{base .GOTESTSUM}} --{{else}}go test{{end}}"
+  #
+  GOLANGCI_VERSION: v1.43.0
+  GOTESTSUM_VERSION: v1.7.0
+  GOLINES_VERSION: v0.7.0
+
 tasks:
 
-  default:
-    deps: [test]
-
-  install-deps:
+  install:deps:
     desc: Install tool dependencies.
     cmds:
       - go install github.com/golangci/golangci-lint/cmd/golangci-lint@{{.GOLANGCI_VERSION}}
       - go install gotest.tools/gotestsum@{{.GOTESTSUM_VERSION}}
-    vars:
-      GOLANGCI_VERSION: v1.42.0
-      GOTESTSUM_VERSION: v1.7.0
+      - go install github.com/segmentio/golines@{{.GOLINES_VERSION}}
 
   lint:
-    desc: Lint Terravalet
+    desc: Lint the code.
     cmds:
       - golangci-lint run ./...
 
+  lint:linelength:
+    desc: Enforce max line length. Use the tool output only as a hint, sometimes it makes wrong decisions.
+    cmds:
+      - golines --max-len=99 --write-output .
+
+  test:
+    desc: Run all the tests (unit + integration). Use this target to get total coverage.
+    cmds:
+      - "{{.TESTRUNNER}} -count=1 -coverprofile=coverage.out ./..."
+
+  browser:
+    desc: "Show code coverage in browser (usage: task test:<subtarget> browser)"
+    cmds:
+      - go tool cover -html=coverage.out
+
   build:
-    desc: Build the terravalet executable
+    desc: Build the terravalet executable.
     cmds:
       - go build -o bin/terravalet -v -ldflags="{{.LDFLAGS}}" .
     vars: &build-vars
       FULL_VERSION:
         sh: git describe --long --dirty --always
       LDFLAGS: -w -s -X main.fullVersion={{.FULL_VERSION}}
-
-  test:
-    desc: Run the integration tests
-    deps: [build]
-    cmds:
-      - "{{.TESTRUNNER}} ./..."
-    vars:
-      GOTESTSUM:
-        sh: which gotestsum 2> /dev/null; true
-      TESTRUNNER: "{{if .GOTESTSUM}}{{.GOTESTSUM}}{{else}}go test{{end}}"
 
   #
   # usage: env RELEASE_TAG=v0.1.0 gopass task release
