@@ -19,13 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixes
 
-- Fixes a test flake due to the use of unsorted set (i.e {abcde} -> {abdcde} or {abdecde} -> {abdcde})
+- Fix a test flake due to the use of unsorted set (i.e {abcde} -> {abdcde} or {abdecde} -> {abdcde})
 
 ## [v0.6.1] - (2021-08-24)
 
 ### Changes
 
-- Bump go to latest v1.17
+- Update Go to 1.17
 
 ### Fixes
 

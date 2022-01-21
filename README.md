@@ -319,7 +319,7 @@ The idea is to tell Terravalet where to search the data to build the up/down scr
 1. The JSON resources definition is a map of resources type objects identified by their own name as a key.
 2. The resource type object has an optional `priority`: import statement for that resource must be placed at the top of up.sh and at the bottom of down.sh (resources that must be imported before others).
 3. The resource type object has an optional `separator`: in case of multiple arguments it is mandatory and it will be used to join them. Using the example below, `tag, owner` will be joined into the string `<tag_value>:<owner_value>`.
-4. The resource type object must have `variables`: a list of fields names that are the keys in the plan to retreive the correct values building the import statement. Using the example below, Terravalet will search for keys `tag` and `owner` in terraform plan for that resource.
+4. The resource type object must have `variables`: a list of fields names that are the keys in the plan to retrieve the correct values building the import statement. Using the example below, Terravalet will search for keys `tag` and `owner` in terraform plan for that resource.
 
 ```json
 {
