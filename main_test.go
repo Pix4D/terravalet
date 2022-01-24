@@ -26,7 +26,7 @@ func Example_version() {
 
 func TestRunRenameSuccess(t *testing.T) {
 	testCases := []struct {
-		description  string
+		name         string
 		options      []string
 		planPath     string
 		wantUpPath   string
@@ -63,7 +63,7 @@ func TestRunRenameSuccess(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			args := []string{"terravalet", "rename", "--plan", tc.planPath}
 			args = append(args, tc.options...)
 
@@ -74,9 +74,9 @@ func TestRunRenameSuccess(t *testing.T) {
 
 func TestRunRenameFailure(t *testing.T) {
 	testCases := []struct {
-		description string
-		planPath    string
-		wantError   error
+		name     string
+		planPath string
+		wantErr  error
 	}{
 		{"plan file doesn't exist",
 			"nonexisting",
@@ -97,17 +97,17 @@ unmatched destroy:
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			args := []string{"terravalet", "rename", "--plan", tc.planPath}
 
-			runFailure(t, args, tc.wantError)
+			runFailure(t, args, tc.wantErr)
 		})
 	}
 }
 
 func TestRunMoveSuccess(t *testing.T) {
 	testCases := []struct {
-		description  string
+		name         string
 		srcPlanPath  string
 		dstPlanPath  string
 		wantUpPath   string
@@ -123,7 +123,7 @@ func TestRunMoveSuccess(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			args := []string{"terravalet", "move",
 				"--src-plan", tc.srcPlanPath, "--dst-plan", tc.dstPlanPath,
 				"--src-state", "src-dummy", "--dst-state", "dst-dummy",
@@ -136,12 +136,12 @@ func TestRunMoveSuccess(t *testing.T) {
 
 func TestRunMoveFailure(t *testing.T) {
 	testCases := []struct {
-		description  string
+		name         string
 		srcPlanPath  string
 		dstPlanPath  string
 		wantUpPath   string
 		wantDownPath string
-		wantError    error
+		wantErr      error
 	}{
 		{"non existing src-plan",
 			"src-plan-path-dummy",
@@ -167,13 +167,13 @@ func TestRunMoveFailure(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			args := []string{"terravalet", "move",
 				"--src-plan", tc.srcPlanPath, "--dst-plan", tc.dstPlanPath,
 				"--src-state", "src-dummy", "--dst-state", "dst-dummy",
 			}
 
-			runFailure(t, args, tc.wantError)
+			runFailure(t, args, tc.wantErr)
 		})
 	}
 }
@@ -225,7 +225,7 @@ func runSuccess(t *testing.T, args []string, wantUpPath string, wantDownPath str
 	}
 }
 
-func runFailure(t *testing.T, args []string, wantError error) {
+func runFailure(t *testing.T, args []string, wantErr error) {
 	tmpDir, err := ioutil.TempDir("", "terravalet")
 	if err != nil {
 		t.Fatalf("creating temporary dir: %v", err)
@@ -242,8 +242,8 @@ func runFailure(t *testing.T, args []string, wantError error) {
 	if err == nil {
 		t.Fatalf("run: args: %s\ngot:  no error\nwant: %q", args, err)
 	}
-	if err.Error() != wantError.Error() {
-		t.Fatalf("run: args: %s\ngot:  %q\nwant: %q", args, err, wantError)
+	if err.Error() != wantErr.Error() {
+		t.Fatalf("run: args: %s\ngot:  %q\nwant: %q", args, err, wantErr)
 	}
 }
 
@@ -254,7 +254,7 @@ var cmpOpt = cmp.Comparer(func(s1, s2 *strset.Set) bool {
 
 func TestParseSuccess(t *testing.T) {
 	testCases := []struct {
-		description string
+		name        string
 		line        string
 		wantCreate  *strset.Set
 		wantDestroy *strset.Set
@@ -280,7 +280,7 @@ func TestParseSuccess(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			rd := strings.NewReader(tc.line)
 
 			gotCreate, gotDestroy, err := parse(rd)
@@ -300,9 +300,9 @@ func TestParseSuccess(t *testing.T) {
 
 func TestParseFailure(t *testing.T) {
 	testCases := []struct {
-		description string
-		line        string
-		wantError   error
+		name    string
+		line    string
+		wantErr error
 	}{
 		{
 			"vaporized is not an expected action",
@@ -312,16 +312,16 @@ func TestParseFailure(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			rd := strings.NewReader(tc.line)
 
 			_, _, err := parse(rd)
 
 			if err == nil {
-				t.Fatalf("\ngot:  no error\nwant: %q", tc.wantError)
+				t.Fatalf("\ngot:  no error\nwant: %q", tc.wantErr)
 			}
-			if err.Error() != tc.wantError.Error() {
-				t.Fatalf("\ngot:  %q\nwant: %q", err, tc.wantError)
+			if err.Error() != tc.wantErr.Error() {
+				t.Fatalf("\ngot:  %q\nwant: %q", err, tc.wantErr)
 			}
 		})
 	}
@@ -329,7 +329,7 @@ func TestParseFailure(t *testing.T) {
 
 func TestMatchExactZeroUnmatched(t *testing.T) {
 	testCases := []struct {
-		description     string
+		name            string
 		create          *strset.Set
 		destroy         *strset.Set
 		wantUpMatches   map[string]string
@@ -350,7 +350,7 @@ func TestMatchExactZeroUnmatched(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			gotUpMatches, gotDownMatches := matchExact(tc.create, tc.destroy)
 
 			if diff := cmp.Diff(tc.wantUpMatches, gotUpMatches); diff != "" {
@@ -371,7 +371,7 @@ func TestMatchExactZeroUnmatched(t *testing.T) {
 
 func TestMatchExactSomeUnmatched(t *testing.T) {
 	testCases := []struct {
-		description string
+		name        string
 		create      *strset.Set
 		destroy     *strset.Set
 		wantCreate  *strset.Set
@@ -398,7 +398,7 @@ func TestMatchExactSomeUnmatched(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			matchExact(tc.create, tc.destroy)
 
 			if diff := cmp.Diff(tc.wantCreate, tc.create, cmpOpt); diff != "" {
@@ -413,7 +413,7 @@ func TestMatchExactSomeUnmatched(t *testing.T) {
 
 func TestMatchFuzzyZeroUnmatched(t *testing.T) {
 	testCases := []struct {
-		description     string
+		name            string
 		create          *strset.Set
 		destroy         *strset.Set
 		wantUpMatches   map[string]string
@@ -446,7 +446,7 @@ func TestMatchFuzzyZeroUnmatched(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 
 			gotUpMatches, gotDownMatches, err := matchFuzzy(tc.create, tc.destroy)
 			if err != nil {
@@ -502,7 +502,7 @@ func TestMatchFuzzyError(t *testing.T) {
 
 func TestRunImportSuccess(t *testing.T) {
 	testCases := []struct {
-		description  string
+		name         string
 		resDefs      string
 		srcPlanPath  string
 		wantUpPath   string
@@ -518,7 +518,7 @@ func TestRunImportSuccess(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			args := []string{"terravalet", "import",
 				"--res-defs", tc.resDefs,
 				"--src-plan", tc.srcPlanPath,
@@ -531,10 +531,10 @@ func TestRunImportSuccess(t *testing.T) {
 
 func TestRunImportFailure(t *testing.T) {
 	testCases := []struct {
-		description string
+		name        string
 		resDefs     string
 		srcPlanPath string
-		wantError   error
+		wantErr     error
 	}{
 		{"non existing src-plan",
 			"testdata/import/terravalet_imports_definitions.json",
@@ -574,13 +574,13 @@ func TestRunImportFailure(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			args := []string{"terravalet", "import",
 				"--res-defs", tc.resDefs,
 				"--src-plan", tc.srcPlanPath,
 			}
 
-			runFailure(t, args, tc.wantError)
+			runFailure(t, args, tc.wantErr)
 		})
 	}
 }
