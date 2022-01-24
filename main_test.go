@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -76,15 +75,15 @@ func TestRunRenameFailure(t *testing.T) {
 	testCases := []struct {
 		name     string
 		planPath string
-		wantErr  error
+		wantErr  string
 	}{
 		{"plan file doesn't exist",
 			"nonexisting",
-			fmt.Errorf("opening the terraform plan file: open nonexisting: no such file or directory"),
+			"opening the terraform plan file: open nonexisting: no such file or directory",
 		},
 		{"matchExact failure",
 			"testdata/rename/02_fuzzy-match.plan.txt",
-			fmt.Errorf(`matchExact:
+			`matchExact:
 unmatched create:
   aws_route53_record.localhostnames_public["artifactory"]
   aws_route53_record.loopback["artifactory"]
@@ -92,7 +91,7 @@ unmatched create:
 unmatched destroy:
   aws_route53_record.artifactory
   aws_route53_record.artifactory_loopback
-  aws_route53_record.artifactory_private`),
+  aws_route53_record.artifactory_private`,
 		},
 	}
 
@@ -141,28 +140,28 @@ func TestRunMoveFailure(t *testing.T) {
 		dstPlanPath  string
 		wantUpPath   string
 		wantDownPath string
-		wantErr      error
+		wantErr      string
 	}{
 		{"non existing src-plan",
 			"src-plan-path-dummy",
 			"dst-plan-path-dummy",
 			"want-up-path-dummy",
 			"want-down-path-dummy",
-			fmt.Errorf("opening the terraform plan file: open src-plan-path-dummy: no such file or directory"),
+			"opening the terraform plan file: open src-plan-path-dummy: no such file or directory",
 		},
 		{"src-plan must only destroy",
 			"testdata/move/05_src-plan.txt",
 			"testdata/move/05_dst-plan.txt",
 			"want-up-path-dummy",
 			"want-down-path-dummy",
-			fmt.Errorf("src-plan contains resources to create: [aws_batch_job_definition.foo]"),
+			"src-plan contains resources to create: [aws_batch_job_definition.foo]",
 		},
 		{"dst-plan must only create",
 			"testdata/move/06_src-plan.txt",
 			"testdata/move/06_dst-plan.txt",
 			"want-up-path-dummy",
 			"want-down-path-dummy",
-			fmt.Errorf("dst-plan contains resources to destroy: [aws_batch_job_definition.foo]"),
+			"dst-plan contains resources to destroy: [aws_batch_job_definition.foo]",
 		},
 	}
 
@@ -225,7 +224,7 @@ func runSuccess(t *testing.T, args []string, wantUpPath string, wantDownPath str
 	}
 }
 
-func runFailure(t *testing.T, args []string, wantErr error) {
+func runFailure(t *testing.T, args []string, wantErr string) {
 	tmpDir, err := ioutil.TempDir("", "terravalet")
 	if err != nil {
 		t.Fatalf("creating temporary dir: %v", err)
@@ -239,11 +238,12 @@ func runFailure(t *testing.T, args []string, wantErr error) {
 	os.Args = args
 
 	err = run()
+
 	if err == nil {
 		t.Fatalf("run: args: %s\ngot:  no error\nwant: %q", args, err)
 	}
-	if err.Error() != wantErr.Error() {
-		t.Fatalf("run: args: %s\ngot:  %q\nwant: %q", args, err, wantErr)
+	if diff := cmp.Diff(wantErr, err.Error()); diff != "" {
+		t.Errorf("error message mismatch (-want +have):\n%s", diff)
 	}
 }
 
@@ -302,12 +302,12 @@ func TestParseFailure(t *testing.T) {
 	testCases := []struct {
 		name    string
 		line    string
-		wantErr error
+		wantErr string
 	}{
 		{
 			"vaporized is not an expected action",
 			"  # aws_instance.bar will be vaporized",
-			errors.New(`line "  # aws_instance.bar will be vaporized", unexpected action "vaporized"`),
+			`line "  # aws_instance.bar will be vaporized", unexpected action "vaporized"`,
 		},
 	}
 
@@ -320,8 +320,8 @@ func TestParseFailure(t *testing.T) {
 			if err == nil {
 				t.Fatalf("\ngot:  no error\nwant: %q", tc.wantErr)
 			}
-			if err.Error() != tc.wantErr.Error() {
-				t.Fatalf("\ngot:  %q\nwant: %q", err, tc.wantErr)
+			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
+				t.Errorf("error message mismatch (-want +have):\n%s", diff)
 			}
 		})
 	}
@@ -534,42 +534,42 @@ func TestRunImportFailure(t *testing.T) {
 		name        string
 		resDefs     string
 		srcPlanPath string
-		wantErr     error
+		wantErr     string
 	}{
 		{"non existing src-plan",
 			"testdata/import/terravalet_imports_definitions.json",
 			"src-plan-path-dummy",
-			fmt.Errorf("opening the terraform plan file: open src-plan-path-dummy: no such file or directory"),
+			"opening the terraform plan file: open src-plan-path-dummy: no such file or directory",
 		},
 		{"src-plan is invalid json",
 			"testdata/import/terravalet_imports_definitions.json",
 			"testdata/import/09_import_empty_src-plan.json",
-			fmt.Errorf("parse src-plan: parsing the plan: unexpected end of JSON input"),
+			"parse src-plan: parsing the plan: unexpected end of JSON input",
 		},
 		{"src-plan must create resource",
 			"testdata/import/terravalet_imports_definitions.json",
 			"testdata/import/10_import_no-new-resources.json",
-			fmt.Errorf("parse src-plan: src-plan doesn't contains resources to create"),
+			"parse src-plan: src-plan doesn't contains resources to create",
 		},
 		{"src-plan contains only undefined resources",
 			"testdata/import/terravalet_imports_definitions.json",
 			"testdata/import/11_import_src-plan_undefined_resources.json",
-			fmt.Errorf("parse src-plan: src-plan contains only undefined resources"),
+			"parse src-plan: src-plan contains only undefined resources",
 		},
 		{"src-plan contains a not existing resource parameter",
 			"testdata/import/terravalet_imports_definitions.json",
 			"testdata/import/12_import_src-plan_invalid_resource_param.json",
-			fmt.Errorf("parse src-plan: error in resources definition dummy_resource2: field 'long_name' doesn't exist in plan"),
+			"parse src-plan: error in resources definition dummy_resource2: field 'long_name' doesn't exist in plan",
 		},
 		{"terravalet missing resources definitions file",
 			"testdata/import/missing.file",
 			"testdata/import/08_import_src-plan.json",
-			fmt.Errorf("opening the definitions file: open testdata/import/missing.file: no such file or directory"),
+			"opening the definitions file: open testdata/import/missing.file: no such file or directory",
 		},
 		{"terravalet invalid resources definitions file",
 			"testdata/import/invalid_imports_definitions.json",
 			"testdata/import/08_import_src-plan.json",
-			fmt.Errorf("parse src-plan: parsing resources definitions: invalid character '}' after object key"),
+			"parse src-plan: parsing resources definitions: invalid character '}' after object key",
 		},
 	}
 
