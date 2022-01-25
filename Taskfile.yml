@@ -47,7 +47,7 @@ tasks:
       - go build -o bin/terravalet -v -ldflags="{{.LDFLAGS}}" .
     vars: &build-vars
       FULL_VERSION:
-        sh: git describe --long --dirty --always
+        sh: git describe --tags --long --dirty --always
       LDFLAGS: -w -s -X main.fullVersion={{.FULL_VERSION}}
 
   #
