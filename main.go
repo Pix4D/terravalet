@@ -384,7 +384,8 @@ func matchFuzzy(create, destroy *strset.Set) (map[string]string, map[string]stri
 			candidates = append(candidates, candidate{dist, c, d})
 		}
 	}
-	sort.Slice(candidates, func(i, j int) bool { return candidates[i].distance < candidates[j].distance })
+	sort.Slice(candidates,
+		func(i, j int) bool { return candidates[i].distance < candidates[j].distance })
 
 	for len(candidates) > 0 {
 		bestCandidate := candidates[0]

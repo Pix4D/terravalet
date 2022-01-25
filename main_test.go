@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -26,7 +25,7 @@ func Example_version() {
 
 func TestRunRenameSuccess(t *testing.T) {
 	testCases := []struct {
-		description  string
+		name         string
 		options      []string
 		planPath     string
 		wantUpPath   string
@@ -63,7 +62,7 @@ func TestRunRenameSuccess(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			args := []string{"terravalet", "rename", "--plan", tc.planPath}
 			args = append(args, tc.options...)
 
@@ -74,17 +73,17 @@ func TestRunRenameSuccess(t *testing.T) {
 
 func TestRunRenameFailure(t *testing.T) {
 	testCases := []struct {
-		description string
-		planPath    string
-		wantError   error
+		name     string
+		planPath string
+		wantErr  string
 	}{
 		{"plan file doesn't exist",
 			"nonexisting",
-			fmt.Errorf("opening the terraform plan file: open nonexisting: no such file or directory"),
+			"opening the terraform plan file: open nonexisting: no such file or directory",
 		},
 		{"matchExact failure",
 			"testdata/rename/02_fuzzy-match.plan.txt",
-			fmt.Errorf(`matchExact:
+			`matchExact:
 unmatched create:
   aws_route53_record.localhostnames_public["artifactory"]
   aws_route53_record.loopback["artifactory"]
@@ -92,22 +91,22 @@ unmatched create:
 unmatched destroy:
   aws_route53_record.artifactory
   aws_route53_record.artifactory_loopback
-  aws_route53_record.artifactory_private`),
+  aws_route53_record.artifactory_private`,
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			args := []string{"terravalet", "rename", "--plan", tc.planPath}
 
-			runFailure(t, args, tc.wantError)
+			runFailure(t, args, tc.wantErr)
 		})
 	}
 }
 
 func TestRunMoveSuccess(t *testing.T) {
 	testCases := []struct {
-		description  string
+		name         string
 		srcPlanPath  string
 		dstPlanPath  string
 		wantUpPath   string
@@ -123,7 +122,7 @@ func TestRunMoveSuccess(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			args := []string{"terravalet", "move",
 				"--src-plan", tc.srcPlanPath, "--dst-plan", tc.dstPlanPath,
 				"--src-state", "src-dummy", "--dst-state", "dst-dummy",
@@ -136,44 +135,44 @@ func TestRunMoveSuccess(t *testing.T) {
 
 func TestRunMoveFailure(t *testing.T) {
 	testCases := []struct {
-		description  string
+		name         string
 		srcPlanPath  string
 		dstPlanPath  string
 		wantUpPath   string
 		wantDownPath string
-		wantError    error
+		wantErr      string
 	}{
 		{"non existing src-plan",
 			"src-plan-path-dummy",
 			"dst-plan-path-dummy",
 			"want-up-path-dummy",
 			"want-down-path-dummy",
-			fmt.Errorf("opening the terraform plan file: open src-plan-path-dummy: no such file or directory"),
+			"opening the terraform plan file: open src-plan-path-dummy: no such file or directory",
 		},
 		{"src-plan must only destroy",
 			"testdata/move/05_src-plan.txt",
 			"testdata/move/05_dst-plan.txt",
 			"want-up-path-dummy",
 			"want-down-path-dummy",
-			fmt.Errorf("src-plan contains resources to create: [aws_batch_job_definition.foo]"),
+			"src-plan contains resources to create: [aws_batch_job_definition.foo]",
 		},
 		{"dst-plan must only create",
 			"testdata/move/06_src-plan.txt",
 			"testdata/move/06_dst-plan.txt",
 			"want-up-path-dummy",
 			"want-down-path-dummy",
-			fmt.Errorf("dst-plan contains resources to destroy: [aws_batch_job_definition.foo]"),
+			"dst-plan contains resources to destroy: [aws_batch_job_definition.foo]",
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			args := []string{"terravalet", "move",
 				"--src-plan", tc.srcPlanPath, "--dst-plan", tc.dstPlanPath,
 				"--src-state", "src-dummy", "--dst-state", "dst-dummy",
 			}
 
-			runFailure(t, args, tc.wantError)
+			runFailure(t, args, tc.wantErr)
 		})
 	}
 }
@@ -225,7 +224,7 @@ func runSuccess(t *testing.T, args []string, wantUpPath string, wantDownPath str
 	}
 }
 
-func runFailure(t *testing.T, args []string, wantError error) {
+func runFailure(t *testing.T, args []string, wantErr string) {
 	tmpDir, err := ioutil.TempDir("", "terravalet")
 	if err != nil {
 		t.Fatalf("creating temporary dir: %v", err)
@@ -239,11 +238,12 @@ func runFailure(t *testing.T, args []string, wantError error) {
 	os.Args = args
 
 	err = run()
+
 	if err == nil {
 		t.Fatalf("run: args: %s\ngot:  no error\nwant: %q", args, err)
 	}
-	if err.Error() != wantError.Error() {
-		t.Fatalf("run: args: %s\ngot:  %q\nwant: %q", args, err, wantError)
+	if diff := cmp.Diff(wantErr, err.Error()); diff != "" {
+		t.Errorf("error message mismatch (-want +have):\n%s", diff)
 	}
 }
 
@@ -254,7 +254,7 @@ var cmpOpt = cmp.Comparer(func(s1, s2 *strset.Set) bool {
 
 func TestParseSuccess(t *testing.T) {
 	testCases := []struct {
-		description string
+		name        string
 		line        string
 		wantCreate  *strset.Set
 		wantDestroy *strset.Set
@@ -280,7 +280,7 @@ func TestParseSuccess(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			rd := strings.NewReader(tc.line)
 
 			gotCreate, gotDestroy, err := parse(rd)
@@ -300,28 +300,28 @@ func TestParseSuccess(t *testing.T) {
 
 func TestParseFailure(t *testing.T) {
 	testCases := []struct {
-		description string
-		line        string
-		wantError   error
+		name    string
+		line    string
+		wantErr string
 	}{
 		{
 			"vaporized is not an expected action",
 			"  # aws_instance.bar will be vaporized",
-			errors.New(`line "  # aws_instance.bar will be vaporized", unexpected action "vaporized"`),
+			`line "  # aws_instance.bar will be vaporized", unexpected action "vaporized"`,
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			rd := strings.NewReader(tc.line)
 
 			_, _, err := parse(rd)
 
 			if err == nil {
-				t.Fatalf("\ngot:  no error\nwant: %q", tc.wantError)
+				t.Fatalf("\ngot:  no error\nwant: %q", tc.wantErr)
 			}
-			if err.Error() != tc.wantError.Error() {
-				t.Fatalf("\ngot:  %q\nwant: %q", err, tc.wantError)
+			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
+				t.Errorf("error message mismatch (-want +have):\n%s", diff)
 			}
 		})
 	}
@@ -329,7 +329,7 @@ func TestParseFailure(t *testing.T) {
 
 func TestMatchExactZeroUnmatched(t *testing.T) {
 	testCases := []struct {
-		description     string
+		name            string
 		create          *strset.Set
 		destroy         *strset.Set
 		wantUpMatches   map[string]string
@@ -350,7 +350,7 @@ func TestMatchExactZeroUnmatched(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			gotUpMatches, gotDownMatches := matchExact(tc.create, tc.destroy)
 
 			if diff := cmp.Diff(tc.wantUpMatches, gotUpMatches); diff != "" {
@@ -371,7 +371,7 @@ func TestMatchExactZeroUnmatched(t *testing.T) {
 
 func TestMatchExactSomeUnmatched(t *testing.T) {
 	testCases := []struct {
-		description string
+		name        string
 		create      *strset.Set
 		destroy     *strset.Set
 		wantCreate  *strset.Set
@@ -398,7 +398,7 @@ func TestMatchExactSomeUnmatched(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			matchExact(tc.create, tc.destroy)
 
 			if diff := cmp.Diff(tc.wantCreate, tc.create, cmpOpt); diff != "" {
@@ -413,7 +413,7 @@ func TestMatchExactSomeUnmatched(t *testing.T) {
 
 func TestMatchFuzzyZeroUnmatched(t *testing.T) {
 	testCases := []struct {
-		description     string
+		name            string
 		create          *strset.Set
 		destroy         *strset.Set
 		wantUpMatches   map[string]string
@@ -446,7 +446,7 @@ func TestMatchFuzzyZeroUnmatched(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 
 			gotUpMatches, gotDownMatches, err := matchFuzzy(tc.create, tc.destroy)
 			if err != nil {
@@ -502,7 +502,7 @@ func TestMatchFuzzyError(t *testing.T) {
 
 func TestRunImportSuccess(t *testing.T) {
 	testCases := []struct {
-		description  string
+		name         string
 		resDefs      string
 		srcPlanPath  string
 		wantUpPath   string
@@ -518,7 +518,7 @@ func TestRunImportSuccess(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			args := []string{"terravalet", "import",
 				"--res-defs", tc.resDefs,
 				"--src-plan", tc.srcPlanPath,
@@ -531,56 +531,56 @@ func TestRunImportSuccess(t *testing.T) {
 
 func TestRunImportFailure(t *testing.T) {
 	testCases := []struct {
-		description string
+		name        string
 		resDefs     string
 		srcPlanPath string
-		wantError   error
+		wantErr     string
 	}{
 		{"non existing src-plan",
 			"testdata/import/terravalet_imports_definitions.json",
 			"src-plan-path-dummy",
-			fmt.Errorf("opening the terraform plan file: open src-plan-path-dummy: no such file or directory"),
+			"opening the terraform plan file: open src-plan-path-dummy: no such file or directory",
 		},
 		{"src-plan is invalid json",
 			"testdata/import/terravalet_imports_definitions.json",
 			"testdata/import/09_import_empty_src-plan.json",
-			fmt.Errorf("parse src-plan: parsing the plan: unexpected end of JSON input"),
+			"parse src-plan: parsing the plan: unexpected end of JSON input",
 		},
 		{"src-plan must create resource",
 			"testdata/import/terravalet_imports_definitions.json",
 			"testdata/import/10_import_no-new-resources.json",
-			fmt.Errorf("parse src-plan: src-plan doesn't contains resources to create"),
+			"parse src-plan: src-plan doesn't contains resources to create",
 		},
 		{"src-plan contains only undefined resources",
 			"testdata/import/terravalet_imports_definitions.json",
 			"testdata/import/11_import_src-plan_undefined_resources.json",
-			fmt.Errorf("parse src-plan: src-plan contains only undefined resources"),
+			"parse src-plan: src-plan contains only undefined resources",
 		},
 		{"src-plan contains a not existing resource parameter",
 			"testdata/import/terravalet_imports_definitions.json",
 			"testdata/import/12_import_src-plan_invalid_resource_param.json",
-			fmt.Errorf("parse src-plan: error in resources definition dummy_resource2: field 'long_name' doesn't exist in plan"),
+			"parse src-plan: error in resources definition dummy_resource2: field 'long_name' doesn't exist in plan",
 		},
 		{"terravalet missing resources definitions file",
 			"testdata/import/missing.file",
 			"testdata/import/08_import_src-plan.json",
-			fmt.Errorf("opening the definitions file: open testdata/import/missing.file: no such file or directory"),
+			"opening the definitions file: open testdata/import/missing.file: no such file or directory",
 		},
 		{"terravalet invalid resources definitions file",
 			"testdata/import/invalid_imports_definitions.json",
 			"testdata/import/08_import_src-plan.json",
-			fmt.Errorf("parse src-plan: parsing resources definitions: invalid character '}' after object key"),
+			"parse src-plan: parsing resources definitions: invalid character '}' after object key",
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			args := []string{"terravalet", "import",
 				"--res-defs", tc.resDefs,
 				"--src-plan", tc.srcPlanPath,
 			}
 
-			runFailure(t, args, tc.wantError)
+			runFailure(t, args, tc.wantErr)
 		})
 	}
 }

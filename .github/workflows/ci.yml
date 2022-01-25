@@ -25,6 +25,6 @@ jobs:
         # the repo). Following the Principle of least privilege, we disable this as long
         # as we don't need it.
         persist-credentials: false
-    - run: task install-deps
+    - run: task install:deps
     - run: task lint
     - run: task test

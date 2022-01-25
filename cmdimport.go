@@ -82,7 +82,8 @@ func Import(rd, definitionsFile io.Reader) ([]ImportElement, []ImportElement, er
 	for _, resource := range filteredResources {
 		// Proceed only if type is declared in resources definitions
 		if _, ok := configs[resource.Type]; !ok {
-			msg := fmt.Sprintf("Warning: resource %s is not defined. Check %s documentation\n", resource.Type, resource.ProviderName)
+			msg := fmt.Sprintf("Warning: resource %s is not defined. Check %s documentation\n",
+				resource.Type, resource.ProviderName)
 			fmt.Printf("\033[1;33m%s\033[0m", msg)
 			break
 		}
@@ -92,12 +93,15 @@ func Import(rd, definitionsFile io.Reader) ([]ImportElement, []ImportElement, er
 		for _, field := range resourceParams.Variables {
 			if _, ok := after[field]; !ok {
 				return imports, removals,
-					fmt.Errorf("error in resources definition %s: field '%s' doesn't exist in plan", resource.Type, field)
+					fmt.Errorf(
+						"error in resources definition %s: field '%s' doesn't exist in plan",
+						resource.Type, field)
 			}
 			subID, ok := after[field].(string)
 			if !ok {
 				return imports, removals,
-					fmt.Errorf("resource_changes:after:%s: type is %T; want: string", field, after[field])
+					fmt.Errorf("resource_changes: after: %s: type is %T; want: string",
+						field, after[field])
 			}
 			resID = append(resID, subID)
 		}
