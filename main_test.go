@@ -205,7 +205,7 @@ func runSuccess(t *testing.T, args []string, wantUpPath string, wantDownPath str
 	os.Args = args
 
 	if err := run(); err != nil {
-		t.Fatalf("run: args: %s\ngot:  %q\nwant: no error", args, err)
+		t.Fatalf("run: args: %s\nhave: %q\nwant: no error", args, err)
 	}
 
 	tmpUp, err := ioutil.ReadFile(tmpUpPath)
@@ -218,12 +218,12 @@ func runSuccess(t *testing.T, args []string, wantUpPath string, wantDownPath str
 	}
 
 	if diff := cmp.Diff(string(wantUp), string(tmpUp)); diff != "" {
-		t.Errorf("\nup script: mismatch (-want +got):\n"+
+		t.Errorf("\nup script: mismatch (-want +have):\n"+
 			"(want path: %s)\n"+
 			"%s", wantUpPath, diff)
 	}
 	if diff := cmp.Diff(string(wantDown), string(tmpDown)); diff != "" {
-		t.Errorf("\ndown script: mismatch (-want +got):\n"+
+		t.Errorf("\ndown script: mismatch (-want +have):\n"+
 			"(want path: %s)\n"+
 			"%s", wantDownPath, diff)
 	}
@@ -245,7 +245,7 @@ func runFailure(t *testing.T, args []string, wantErr string) {
 	err = run()
 
 	if err == nil {
-		t.Fatalf("run: args: %s\ngot:  no error\nwant: %q", args, err)
+		t.Fatalf("run: args: %s\nhave: no error\nwant: %q", args, err)
 	}
 	if diff := cmp.Diff(wantErr, err.Error()); diff != "" {
 		t.Errorf("error message mismatch (-want +have):\n%s", diff)
@@ -288,16 +288,16 @@ func TestParseSuccess(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			rd := strings.NewReader(tc.line)
 
-			gotCreate, gotDestroy, err := parse(rd)
+			haveCreate, haveDestroy, err := parse(rd)
 
 			if err != nil {
-				t.Fatalf("\ngot:  %q\nwant: no error", err)
+				t.Fatalf("\nhave: %q\nwant: no error", err)
 			}
-			if diff := cmp.Diff(tc.wantCreate, gotCreate, setCmp); diff != "" {
-				t.Errorf("\ncreate: mismatch (-want +got):\n%s", diff)
+			if diff := cmp.Diff(tc.wantCreate, haveCreate, setCmp); diff != "" {
+				t.Errorf("\ncreate: mismatch (-want +have):\n%s", diff)
 			}
-			if diff := cmp.Diff(tc.wantDestroy, gotDestroy, setCmp); diff != "" {
-				t.Errorf("\ndestroy: mismatch (-want +got):\n%s", diff)
+			if diff := cmp.Diff(tc.wantDestroy, haveDestroy, setCmp); diff != "" {
+				t.Errorf("\ndestroy: mismatch (-want +have):\n%s", diff)
 			}
 		})
 	}
@@ -323,7 +323,7 @@ func TestParseFailure(t *testing.T) {
 			_, _, err := parse(rd)
 
 			if err == nil {
-				t.Fatalf("\ngot:  no error\nwant: %q", tc.wantErr)
+				t.Fatalf("\nhave: no error\nwant: %q", tc.wantErr)
 			}
 			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
 				t.Errorf("error message mismatch (-want +have):\n%s", diff)
@@ -358,19 +358,19 @@ func TestMatchExactZeroUnmatched(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			gotUpMatches, gotDownMatches := matchExact(tc.create, tc.destroy)
+			haveUpMatches, haveDownMatches := matchExact(tc.create, tc.destroy)
 
-			if diff := cmp.Diff(tc.wantUpMatches, gotUpMatches); diff != "" {
-				t.Errorf("\nupMatches: mismatch (-want +got):\n%s", diff)
+			if diff := cmp.Diff(tc.wantUpMatches, haveUpMatches); diff != "" {
+				t.Errorf("\nupMatches: mismatch (-want +have):\n%s", diff)
 			}
-			if diff := cmp.Diff(tc.wantDownMatches, gotDownMatches); diff != "" {
-				t.Errorf("\ndownMatches: mismatch (-want +got):\n%s", diff)
+			if diff := cmp.Diff(tc.wantDownMatches, haveDownMatches); diff != "" {
+				t.Errorf("\ndownMatches: mismatch (-want +have):\n%s", diff)
 			}
-			if got := tc.create.Size(); got != 0 {
-				t.Errorf("\nsize(create): got: %d; want: 0", got)
+			if have := tc.create.Size(); have != 0 {
+				t.Errorf("\nsize(create): have: %d; want: 0", have)
 			}
-			if got := tc.destroy.Size(); got != 0 {
-				t.Errorf("\nsize(destroy): got: %d; want: 0", got)
+			if have := tc.destroy.Size(); have != 0 {
+				t.Errorf("\nsize(destroy): have: %d; want: 0", have)
 			}
 		})
 	}
@@ -412,10 +412,10 @@ func TestMatchExactSomeUnmatched(t *testing.T) {
 			matchExact(tc.create, tc.destroy)
 
 			if diff := cmp.Diff(tc.wantCreate, tc.create, setCmp); diff != "" {
-				t.Errorf("\nUnmatched create: (-want +got):\n%s", diff)
+				t.Errorf("\nUnmatched create: (-want +have):\n%s", diff)
 			}
 			if diff := cmp.Diff(tc.wantDestroy, tc.destroy, setCmp); diff != "" {
-				t.Errorf("\nUnmatched destroy (-want +got):\n%s", diff)
+				t.Errorf("\nUnmatched destroy (-want +have):\n%s", diff)
 			}
 		})
 	}
@@ -460,22 +460,22 @@ func TestMatchFuzzyZeroUnmatched(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 
-			gotUpMatches, gotDownMatches, err := matchFuzzy(tc.create, tc.destroy)
+			haveUpMatches, haveDownMatches, err := matchFuzzy(tc.create, tc.destroy)
 			if err != nil {
-				t.Fatalf("got: %s; want: no error", err)
+				t.Fatalf("have: %s; want: no error", err)
 			}
 
-			if diff := cmp.Diff(tc.wantUpMatches, gotUpMatches); diff != "" {
-				t.Errorf("\nupMatches: mismatch (-want +got):\n%s", diff)
+			if diff := cmp.Diff(tc.wantUpMatches, haveUpMatches); diff != "" {
+				t.Errorf("\nupMatches: mismatch (-want +have):\n%s", diff)
 			}
-			if diff := cmp.Diff(tc.wantDownMatches, gotDownMatches); diff != "" {
-				t.Errorf("\ndownMatches: mismatch (-want +got):\n%s", diff)
+			if diff := cmp.Diff(tc.wantDownMatches, haveDownMatches); diff != "" {
+				t.Errorf("\ndownMatches: mismatch (-want +have):\n%s", diff)
 			}
-			if got := tc.create.Size(); got != 0 {
-				t.Errorf("\nsize(create): got: %d; want: 0", got)
+			if have := tc.create.Size(); have != 0 {
+				t.Errorf("\nsize(create): have: %d; want: 0", have)
 			}
-			if got := tc.destroy.Size(); got != 0 {
-				t.Errorf("\nsize(destroy): got: %d; want: 0", got)
+			if have := tc.destroy.Size(); have != 0 {
+				t.Errorf("\nsize(destroy): have: %d; want: 0", have)
 			}
 		})
 	}
@@ -486,24 +486,24 @@ func TestMatchFuzzyError(t *testing.T) {
 	destroy := set.NewStringSet(`abdcde`, `hfjabd`)
 	_, _, err := matchFuzzy(create, destroy)
 	if err == nil {
-		t.Fatalf("got: no error; want: an ambiguous migration error")
+		t.Fatalf("have: no error; want: an ambiguous migration error")
 	}
 
-	gotMsg := err.Error()
+	haveMsg := err.Error()
 	var msg string
 
 	want := "ambiguous migration:"
-	if !strings.HasPrefix(gotMsg, want) {
+	if !strings.HasPrefix(haveMsg, want) {
 		msg += fmt.Sprintf("error message does not start with %q\n", want)
 	}
 
 	want = "{abcde} -> {abdcde}"
-	if !strings.Contains(gotMsg, want) {
+	if !strings.Contains(haveMsg, want) {
 		msg += fmt.Sprintf("error message does not contain %q", want)
 	}
 
 	want = "{abdecde} -> {abdcde}"
-	if !strings.Contains(gotMsg, want) {
+	if !strings.Contains(haveMsg, want) {
 		msg += fmt.Sprintf("error message does not contain %q", want)
 	}
 
