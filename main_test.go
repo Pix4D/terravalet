@@ -32,32 +32,32 @@ func TestRunRenameSuccess(t *testing.T) {
 		wantDownPath string
 	}{
 		{
-			"exact match",
-			[]string{},
-			"testdata/rename/01_exact-match.plan.txt",
-			"testdata/rename/01_exact-match.up.sh",
-			"testdata/rename/01_exact-match.down.sh",
+			name:         "exact match",
+			options:      []string{},
+			planPath:     "testdata/rename/01_exact-match.plan.txt",
+			wantUpPath:   "testdata/rename/01_exact-match.up.sh",
+			wantDownPath: "testdata/rename/01_exact-match.down.sh",
 		},
 		{
-			"q-gram fuzzy match simple",
-			[]string{"--fuzzy-match"},
-			"testdata/rename/02_fuzzy-match.plan.txt",
-			"testdata/rename/02_fuzzy-match.up.sh",
-			"testdata/rename/02_fuzzy-match.down.sh",
+			name:         "q-gram fuzzy match simple",
+			options:      []string{"--fuzzy-match"},
+			planPath:     "testdata/rename/02_fuzzy-match.plan.txt",
+			wantUpPath:   "testdata/rename/02_fuzzy-match.up.sh",
+			wantDownPath: "testdata/rename/02_fuzzy-match.down.sh",
 		},
 		{
-			"q-gram fuzzy match complicated",
-			[]string{"--fuzzy-match"},
-			"testdata/rename/03_fuzzy-match.plan.txt",
-			"testdata/rename/03_fuzzy-match.up.sh",
-			"testdata/rename/03_fuzzy-match.down.sh",
+			name:         "q-gram fuzzy match complicated",
+			options:      []string{"--fuzzy-match"},
+			planPath:     "testdata/rename/03_fuzzy-match.plan.txt",
+			wantUpPath:   "testdata/rename/03_fuzzy-match.up.sh",
+			wantDownPath: "testdata/rename/03_fuzzy-match.down.sh",
 		},
 		{
-			"q-gram fuzzy match complicated (regression)",
-			[]string{"--fuzzy-match"},
-			"testdata/rename/07_fuzzy-match.plan.txt",
-			"testdata/rename/07_fuzzy-match.up.sh",
-			"testdata/rename/07_fuzzy-match.down.sh",
+			name:         "q-gram fuzzy match complicated (regression)",
+			options:      []string{"--fuzzy-match"},
+			planPath:     "testdata/rename/07_fuzzy-match.plan.txt",
+			wantUpPath:   "testdata/rename/07_fuzzy-match.up.sh",
+			wantDownPath: "testdata/rename/07_fuzzy-match.down.sh",
 		},
 	}
 
@@ -77,13 +77,15 @@ func TestRunRenameFailure(t *testing.T) {
 		planPath string
 		wantErr  string
 	}{
-		{"plan file doesn't exist",
-			"nonexisting",
-			"opening the terraform plan file: open nonexisting: no such file or directory",
+		{
+			name:     "plan file doesn't exist",
+			planPath: "nonexisting",
+			wantErr:  "opening the terraform plan file: open nonexisting: no such file or directory",
 		},
-		{"matchExact failure",
-			"testdata/rename/02_fuzzy-match.plan.txt",
-			`matchExact:
+		{
+			name:     "matchExact failure",
+			planPath: "testdata/rename/02_fuzzy-match.plan.txt",
+			wantErr: `matchExact:
 unmatched create:
   aws_route53_record.localhostnames_public["artifactory"]
   aws_route53_record.loopback["artifactory"]
@@ -113,11 +115,11 @@ func TestRunMoveSuccess(t *testing.T) {
 		wantDownPath string
 	}{
 		{
-			"exact match",
-			"testdata/move/04_src-plan.txt",
-			"testdata/move/04_dst-plan.txt",
-			"testdata/move/04_up.sh",
-			"testdata/move/04_down.sh",
+			name:         "exact match",
+			srcPlanPath:  "testdata/move/04_src-plan.txt",
+			dstPlanPath:  "testdata/move/04_dst-plan.txt",
+			wantUpPath:   "testdata/move/04_up.sh",
+			wantDownPath: "testdata/move/04_down.sh",
 		},
 	}
 
@@ -142,26 +144,29 @@ func TestRunMoveFailure(t *testing.T) {
 		wantDownPath string
 		wantErr      string
 	}{
-		{"non existing src-plan",
-			"src-plan-path-dummy",
-			"dst-plan-path-dummy",
-			"want-up-path-dummy",
-			"want-down-path-dummy",
-			"opening the terraform plan file: open src-plan-path-dummy: no such file or directory",
+		{
+			name:         "non existing src-plan",
+			srcPlanPath:  "src-plan-path-dummy",
+			dstPlanPath:  "dst-plan-path-dummy",
+			wantUpPath:   "want-up-path-dummy",
+			wantDownPath: "want-down-path-dummy",
+			wantErr:      "opening the terraform plan file: open src-plan-path-dummy: no such file or directory",
 		},
-		{"src-plan must only destroy",
-			"testdata/move/05_src-plan.txt",
-			"testdata/move/05_dst-plan.txt",
-			"want-up-path-dummy",
-			"want-down-path-dummy",
-			"src-plan contains resources to create: [aws_batch_job_definition.foo]",
+		{
+			name:         "src-plan must only destroy",
+			srcPlanPath:  "testdata/move/05_src-plan.txt",
+			dstPlanPath:  "testdata/move/05_dst-plan.txt",
+			wantUpPath:   "want-up-path-dummy",
+			wantDownPath: "want-down-path-dummy",
+			wantErr:      "src-plan contains resources to create: [aws_batch_job_definition.foo]",
 		},
-		{"dst-plan must only create",
-			"testdata/move/06_src-plan.txt",
-			"testdata/move/06_dst-plan.txt",
-			"want-up-path-dummy",
-			"want-down-path-dummy",
-			"dst-plan contains resources to destroy: [aws_batch_job_definition.foo]",
+		{
+			name:         "dst-plan must only create",
+			srcPlanPath:  "testdata/move/06_src-plan.txt",
+			dstPlanPath:  "testdata/move/06_dst-plan.txt",
+			wantUpPath:   "want-up-path-dummy",
+			wantDownPath: "want-down-path-dummy",
+			wantErr:      "dst-plan contains resources to destroy: [aws_batch_job_definition.foo]",
 		},
 	}
 
@@ -260,22 +265,22 @@ func TestParseSuccess(t *testing.T) {
 		wantDestroy *strset.Set
 	}{
 		{
-			"destroyed is recorded",
-			"  # aws_instance.bar will be destroyed",
-			set.NewStringSet(),
-			set.NewStringSet("aws_instance.bar"),
+			name:        "destroyed is recorded",
+			line:        "  # aws_instance.bar will be destroyed",
+			wantCreate:  set.NewStringSet(),
+			wantDestroy: set.NewStringSet("aws_instance.bar"),
 		},
 		{
-			"created is recorded",
-			"  # aws_instance.bar will be created",
-			set.NewStringSet("aws_instance.bar"),
-			set.NewStringSet(),
+			name:        "created is recorded",
+			line:        "  # aws_instance.bar will be created",
+			wantCreate:  set.NewStringSet("aws_instance.bar"),
+			wantDestroy: set.NewStringSet(),
 		},
 		{
-			"read is skipped",
-			"  # data.foo.bar will be read during apply",
-			set.NewStringSet(),
-			set.NewStringSet(),
+			name:        "read is skipped",
+			line:        "  # data.foo.bar will be read during apply",
+			wantCreate:  set.NewStringSet(),
+			wantDestroy: set.NewStringSet(),
 		},
 	}
 
@@ -305,9 +310,9 @@ func TestParseFailure(t *testing.T) {
 		wantErr string
 	}{
 		{
-			"vaporized is not an expected action",
-			"  # aws_instance.bar will be vaporized",
-			`line "  # aws_instance.bar will be vaporized", unexpected action "vaporized"`,
+			name:    "vaporized is not an expected action",
+			line:    "  # aws_instance.bar will be vaporized",
+			wantErr: `line "  # aws_instance.bar will be vaporized", unexpected action "vaporized"`,
 		},
 	}
 
@@ -335,17 +340,19 @@ func TestMatchExactZeroUnmatched(t *testing.T) {
 		wantUpMatches   map[string]string
 		wantDownMatches map[string]string
 	}{
-		{"increase depth, len 1",
-			set.NewStringSet("a.b"),
-			set.NewStringSet("b"),
-			map[string]string{"b": "a.b"},
-			map[string]string{"a.b": "b"},
+		{
+			name:            "increase depth, len 1",
+			create:          set.NewStringSet("a.b"),
+			destroy:         set.NewStringSet("b"),
+			wantUpMatches:   map[string]string{"b": "a.b"},
+			wantDownMatches: map[string]string{"a.b": "b"},
 		},
-		{"decrease depth, len 1",
-			set.NewStringSet("b"),
-			set.NewStringSet("a.b"),
-			map[string]string{"a.b": "b"},
-			map[string]string{"b": "a.b"},
+		{
+			name:            "decrease depth, len 1",
+			create:          set.NewStringSet("b"),
+			destroy:         set.NewStringSet("a.b"),
+			wantUpMatches:   map[string]string{"a.b": "b"},
+			wantDownMatches: map[string]string{"b": "a.b"},
 		},
 	}
 
@@ -377,23 +384,26 @@ func TestMatchExactSomeUnmatched(t *testing.T) {
 		wantCreate  *strset.Set
 		wantDestroy *strset.Set
 	}{
-		{"len(create) == len(destroy), no match",
-			set.NewStringSet("a.b"),
-			set.NewStringSet("j.k"),
-			set.NewStringSet("a.b"),
-			set.NewStringSet("j.k"),
+		{
+			name:        "len(create) == len(destroy), no match",
+			create:      set.NewStringSet("a.b"),
+			destroy:     set.NewStringSet("j.k"),
+			wantCreate:  set.NewStringSet("a.b"),
+			wantDestroy: set.NewStringSet("j.k"),
 		},
-		{"len(create) > len(destroy), match",
-			set.NewStringSet("a.b", "a.j.k"),
-			set.NewStringSet("j.k"),
-			set.NewStringSet("a.b"),
-			set.NewStringSet(),
+		{
+			name:        "len(create) > len(destroy), match",
+			create:      set.NewStringSet("a.b", "a.j.k"),
+			destroy:     set.NewStringSet("j.k"),
+			wantCreate:  set.NewStringSet("a.b"),
+			wantDestroy: set.NewStringSet(),
 		},
-		{"len(create) < len(destroy), match",
-			set.NewStringSet("a.b"),
-			set.NewStringSet("j.k", "x.a.b"),
-			set.NewStringSet(),
-			set.NewStringSet("j.k"),
+		{
+			name:        "len(create) < len(destroy), match",
+			create:      set.NewStringSet("a.b"),
+			destroy:     set.NewStringSet("j.k", "x.a.b"),
+			wantCreate:  set.NewStringSet(),
+			wantDestroy: set.NewStringSet("j.k"),
 		},
 	}
 
@@ -419,26 +429,28 @@ func TestMatchFuzzyZeroUnmatched(t *testing.T) {
 		wantUpMatches   map[string]string
 		wantDownMatches map[string]string
 	}{
-		{"1 fuzzy match",
-			set.NewStringSet(`foo.loopback["bar"]`),
-			set.NewStringSet(`foo.bar_loopback`),
-			map[string]string{`foo.bar_loopback`: `foo.loopback["bar"]`},
-			map[string]string{`foo.loopback["bar"]`: `foo.bar_loopback`},
+		{
+			name:            "1 fuzzy match",
+			create:          set.NewStringSet(`foo.loopback["bar"]`),
+			destroy:         set.NewStringSet(`foo.bar_loopback`),
+			wantUpMatches:   map[string]string{`foo.bar_loopback`: `foo.loopback["bar"]`},
+			wantDownMatches: map[string]string{`foo.loopback["bar"]`: `foo.bar_loopback`},
 		},
-		{"3 fuzzy matches",
-			set.NewStringSet(
+		{
+			name: "3 fuzzy matches",
+			create: set.NewStringSet(
 				`foo.loopback["bar"]`,
 				`foo.private["bar"]`,
 				`foo.public["bar"]`),
-			set.NewStringSet(
+			destroy: set.NewStringSet(
 				`foo.bar_loopback`,
 				`foo.bar_private`,
 				`foo.bar`),
-			map[string]string{
+			wantUpMatches: map[string]string{
 				`foo.bar_loopback`: `foo.loopback["bar"]`,
 				`foo.bar_private`:  `foo.private["bar"]`,
 				`foo.bar`:          `foo.public["bar"]`},
-			map[string]string{
+			wantDownMatches: map[string]string{
 				`foo.loopback["bar"]`: `foo.bar_loopback`,
 				`foo.private["bar"]`:  `foo.bar_private`,
 				`foo.public["bar"]`:   `foo.bar`},
@@ -509,11 +521,11 @@ func TestRunImportSuccess(t *testing.T) {
 		wantDownPath string
 	}{
 		{
-			"import resources",
-			"testdata/import/terravalet_imports_definitions.json",
-			"testdata/import/08_import_src-plan.json",
-			"testdata/import/08_import_up.sh",
-			"testdata/import/08_import_down.sh",
+			name:         "import resources",
+			resDefs:      "testdata/import/terravalet_imports_definitions.json",
+			srcPlanPath:  "testdata/import/08_import_src-plan.json",
+			wantUpPath:   "testdata/import/08_import_up.sh",
+			wantDownPath: "testdata/import/08_import_down.sh",
 		},
 	}
 
@@ -536,40 +548,47 @@ func TestRunImportFailure(t *testing.T) {
 		srcPlanPath string
 		wantErr     string
 	}{
-		{"non existing src-plan",
-			"testdata/import/terravalet_imports_definitions.json",
-			"src-plan-path-dummy",
-			"opening the terraform plan file: open src-plan-path-dummy: no such file or directory",
+		{
+			name:        "non existing src-plan",
+			resDefs:     "testdata/import/terravalet_imports_definitions.json",
+			srcPlanPath: "src-plan-path-dummy",
+			wantErr:     "opening the terraform plan file: open src-plan-path-dummy: no such file or directory",
 		},
-		{"src-plan is invalid json",
-			"testdata/import/terravalet_imports_definitions.json",
-			"testdata/import/09_import_empty_src-plan.json",
-			"parse src-plan: parsing the plan: unexpected end of JSON input",
+		{
+			name:        "src-plan is invalid json",
+			resDefs:     "testdata/import/terravalet_imports_definitions.json",
+			srcPlanPath: "testdata/import/09_import_empty_src-plan.json",
+			wantErr:     "parse src-plan: parsing the plan: unexpected end of JSON input",
 		},
-		{"src-plan must create resource",
-			"testdata/import/terravalet_imports_definitions.json",
-			"testdata/import/10_import_no-new-resources.json",
-			"parse src-plan: src-plan doesn't contains resources to create",
+		{
+			name:        "src-plan must create resource",
+			resDefs:     "testdata/import/terravalet_imports_definitions.json",
+			srcPlanPath: "testdata/import/10_import_no-new-resources.json",
+			wantErr:     "parse src-plan: src-plan doesn't contains resources to create",
 		},
-		{"src-plan contains only undefined resources",
-			"testdata/import/terravalet_imports_definitions.json",
-			"testdata/import/11_import_src-plan_undefined_resources.json",
-			"parse src-plan: src-plan contains only undefined resources",
+		{
+			name:        "src-plan contains only undefined resources",
+			resDefs:     "testdata/import/terravalet_imports_definitions.json",
+			srcPlanPath: "testdata/import/11_import_src-plan_undefined_resources.json",
+			wantErr:     "parse src-plan: src-plan contains only undefined resources",
 		},
-		{"src-plan contains a not existing resource parameter",
-			"testdata/import/terravalet_imports_definitions.json",
-			"testdata/import/12_import_src-plan_invalid_resource_param.json",
-			"parse src-plan: error in resources definition dummy_resource2: field 'long_name' doesn't exist in plan",
+		{
+			name:        "src-plan contains a not existing resource parameter",
+			resDefs:     "testdata/import/terravalet_imports_definitions.json",
+			srcPlanPath: "testdata/import/12_import_src-plan_invalid_resource_param.json",
+			wantErr:     "parse src-plan: error in resources definition dummy_resource2: field 'long_name' doesn't exist in plan",
 		},
-		{"terravalet missing resources definitions file",
-			"testdata/import/missing.file",
-			"testdata/import/08_import_src-plan.json",
-			"opening the definitions file: open testdata/import/missing.file: no such file or directory",
+		{
+			name:        "terravalet missing resources definitions file",
+			resDefs:     "testdata/import/missing.file",
+			srcPlanPath: "testdata/import/08_import_src-plan.json",
+			wantErr:     "opening the definitions file: open testdata/import/missing.file: no such file or directory",
 		},
-		{"terravalet invalid resources definitions file",
-			"testdata/import/invalid_imports_definitions.json",
-			"testdata/import/08_import_src-plan.json",
-			"parse src-plan: parsing resources definitions: invalid character '}' after object key",
+		{
+			name:        "terravalet invalid resources definitions file",
+			resDefs:     "testdata/import/invalid_imports_definitions.json",
+			srcPlanPath: "testdata/import/08_import_src-plan.json",
+			wantErr:     "parse src-plan: parsing resources definitions: invalid character '}' after object key",
 		},
 	}
 
