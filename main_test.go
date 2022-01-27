@@ -145,7 +145,13 @@ func TestRunMoveFailure(t *testing.T) {
 			name:        "non existing src-plan",
 			srcPlanPath: "src-plan-path-dummy",
 			dstPlanPath: "dst-plan-path-dummy",
-			wantErr:     "opening the terraform plan file: open src-plan-path-dummy: no such file or directory",
+			wantErr:     "opening the terraform SRC plan file: open src-plan-path-dummy: no such file or directory",
+		},
+		{
+			name:        "non existing dst-plan",
+			srcPlanPath: "testdata/move/05_src-plan.txt",
+			dstPlanPath: "dst-plan-path-dummy",
+			wantErr:     "opening the terraform DST plan file: open dst-plan-path-dummy: no such file or directory",
 		},
 		{
 			name:        "src-plan must only destroy",

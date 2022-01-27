@@ -156,13 +156,13 @@ func doMove(upPath, downPath, srcPlanPath, dstPlanPath, srcStatePath, dstStatePa
 	// srcStatePath and dstStatePath
 	srcPlanFile, err := os.Open(srcPlanPath)
 	if err != nil {
-		return fmt.Errorf("opening the terraform plan file: %v", err)
+		return fmt.Errorf("opening the terraform SRC plan file: %v", err)
 	}
 	defer srcPlanFile.Close()
 
 	dstPlanFile, err := os.Open(dstPlanPath)
 	if err != nil {
-		return fmt.Errorf("opening the terraform plan file: %v", err)
+		return fmt.Errorf("opening the terraform DST plan file: %v", err)
 	}
 	defer dstPlanFile.Close()
 
