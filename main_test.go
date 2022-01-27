@@ -136,36 +136,28 @@ func TestRunMoveSuccess(t *testing.T) {
 
 func TestRunMoveFailure(t *testing.T) {
 	testCases := []struct {
-		name         string
-		srcPlanPath  string
-		dstPlanPath  string
-		wantUpPath   string
-		wantDownPath string
-		wantErr      string
+		name        string
+		srcPlanPath string
+		dstPlanPath string
+		wantErr     string
 	}{
 		{
-			name:         "non existing src-plan",
-			srcPlanPath:  "src-plan-path-dummy",
-			dstPlanPath:  "dst-plan-path-dummy",
-			wantUpPath:   "want-up-path-dummy",
-			wantDownPath: "want-down-path-dummy",
-			wantErr:      "opening the terraform plan file: open src-plan-path-dummy: no such file or directory",
+			name:        "non existing src-plan",
+			srcPlanPath: "src-plan-path-dummy",
+			dstPlanPath: "dst-plan-path-dummy",
+			wantErr:     "opening the terraform plan file: open src-plan-path-dummy: no such file or directory",
 		},
 		{
-			name:         "src-plan must only destroy",
-			srcPlanPath:  "testdata/move/05_src-plan.txt",
-			dstPlanPath:  "testdata/move/05_dst-plan.txt",
-			wantUpPath:   "want-up-path-dummy",
-			wantDownPath: "want-down-path-dummy",
-			wantErr:      "src-plan contains resources to create: [aws_batch_job_definition.foo]",
+			name:        "src-plan must only destroy",
+			srcPlanPath: "testdata/move/05_src-plan.txt",
+			dstPlanPath: "testdata/move/05_dst-plan.txt",
+			wantErr:     "src-plan contains resources to create: [aws_batch_job_definition.foo]",
 		},
 		{
-			name:         "dst-plan must only create",
-			srcPlanPath:  "testdata/move/06_src-plan.txt",
-			dstPlanPath:  "testdata/move/06_dst-plan.txt",
-			wantUpPath:   "want-up-path-dummy",
-			wantDownPath: "want-down-path-dummy",
-			wantErr:      "dst-plan contains resources to destroy: [aws_batch_job_definition.foo]",
+			name:        "dst-plan must only create",
+			srcPlanPath: "testdata/move/06_src-plan.txt",
+			dstPlanPath: "testdata/move/06_dst-plan.txt",
+			wantErr:     "dst-plan contains resources to destroy: [aws_batch_job_definition.foo]",
 		},
 	}
 
