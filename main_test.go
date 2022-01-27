@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -183,16 +182,16 @@ func TestRunMoveFailure(t *testing.T) {
 }
 
 func runSuccess(t *testing.T, args []string, wantUpPath string, wantDownPath string) {
-	wantUp, err := ioutil.ReadFile(wantUpPath)
+	wantUp, err := os.ReadFile(wantUpPath)
 	if err != nil {
 		t.Fatalf("reading want up file: %v", err)
 	}
-	wantDown, err := ioutil.ReadFile(wantDownPath)
+	wantDown, err := os.ReadFile(wantDownPath)
 	if err != nil {
 		t.Fatalf("reading want down file: %v", err)
 	}
 
-	tmpDir, err := ioutil.TempDir("", "terravalet")
+	tmpDir, err := os.MkdirTemp("", "terravalet")
 	if err != nil {
 		t.Fatalf("creating temporary dir: %v", err)
 	}
@@ -208,11 +207,11 @@ func runSuccess(t *testing.T, args []string, wantUpPath string, wantDownPath str
 		t.Fatalf("run: args: %s\nhave: %q\nwant: no error", args, err)
 	}
 
-	tmpUp, err := ioutil.ReadFile(tmpUpPath)
+	tmpUp, err := os.ReadFile(tmpUpPath)
 	if err != nil {
 		t.Fatalf("reading tmp up file: %v", err)
 	}
-	tmpDown, err := ioutil.ReadFile(tmpDownPath)
+	tmpDown, err := os.ReadFile(tmpDownPath)
 	if err != nil {
 		t.Fatalf("reading tmp down file: %v", err)
 	}
@@ -230,7 +229,7 @@ func runSuccess(t *testing.T, args []string, wantUpPath string, wantDownPath str
 }
 
 func runFailure(t *testing.T, args []string, wantErr string) {
-	tmpDir, err := ioutil.TempDir("", "terravalet")
+	tmpDir, err := os.MkdirTemp("", "terravalet")
 	if err != nil {
 		t.Fatalf("creating temporary dir: %v", err)
 	}
