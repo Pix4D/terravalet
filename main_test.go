@@ -212,12 +212,12 @@ func runSuccess(t *testing.T, args []string, wantUpPath string, wantDownPath str
 		t.Fatalf("reading tmp down file: %v", err)
 	}
 
-	if diff := cmp.Diff(wantUp, tmpUp, cmpOpt); diff != "" {
+	if diff := cmp.Diff(wantUp, tmpUp, setCmp); diff != "" {
 		t.Errorf("\nup script: mismatch (-want +got):\n"+
 			"(want path: %s)\n"+
 			"%s", wantUpPath, diff)
 	}
-	if diff := cmp.Diff(wantDown, tmpDown, cmpOpt); diff != "" {
+	if diff := cmp.Diff(wantDown, tmpDown, setCmp); diff != "" {
 		t.Errorf("\ndown script: mismatch (-want +got):\n"+
 			"(want path: %s)\n"+
 			"%s", wantDownPath, diff)
@@ -248,7 +248,7 @@ func runFailure(t *testing.T, args []string, wantErr string) {
 }
 
 // Used to compare sets.
-var cmpOpt = cmp.Comparer(func(s1, s2 *strset.Set) bool {
+var setCmp = cmp.Comparer(func(s1, s2 *strset.Set) bool {
 	return s1.IsEqual(s2)
 })
 
@@ -288,10 +288,10 @@ func TestParseSuccess(t *testing.T) {
 			if err != nil {
 				t.Fatalf("\ngot:  %q\nwant: no error", err)
 			}
-			if diff := cmp.Diff(tc.wantCreate, gotCreate, cmpOpt); diff != "" {
+			if diff := cmp.Diff(tc.wantCreate, gotCreate, setCmp); diff != "" {
 				t.Errorf("\ncreate: mismatch (-want +got):\n%s", diff)
 			}
-			if diff := cmp.Diff(tc.wantDestroy, gotDestroy, cmpOpt); diff != "" {
+			if diff := cmp.Diff(tc.wantDestroy, gotDestroy, setCmp); diff != "" {
 				t.Errorf("\ndestroy: mismatch (-want +got):\n%s", diff)
 			}
 		})
@@ -401,10 +401,10 @@ func TestMatchExactSomeUnmatched(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			matchExact(tc.create, tc.destroy)
 
-			if diff := cmp.Diff(tc.wantCreate, tc.create, cmpOpt); diff != "" {
+			if diff := cmp.Diff(tc.wantCreate, tc.create, setCmp); diff != "" {
 				t.Errorf("\nUnmatched create: (-want +got):\n%s", diff)
 			}
-			if diff := cmp.Diff(tc.wantDestroy, tc.destroy, cmpOpt); diff != "" {
+			if diff := cmp.Diff(tc.wantDestroy, tc.destroy, setCmp); diff != "" {
 				t.Errorf("\nUnmatched destroy (-want +got):\n%s", diff)
 			}
 		})
