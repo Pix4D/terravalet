@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -32,32 +31,32 @@ func TestRunRenameSuccess(t *testing.T) {
 		wantDownPath string
 	}{
 		{
-			"exact match",
-			[]string{},
-			"testdata/rename/01_exact-match.plan.txt",
-			"testdata/rename/01_exact-match.up.sh",
-			"testdata/rename/01_exact-match.down.sh",
+			name:         "exact match",
+			options:      []string{},
+			planPath:     "testdata/rename/01_exact-match.plan.txt",
+			wantUpPath:   "testdata/rename/01_exact-match.up.sh",
+			wantDownPath: "testdata/rename/01_exact-match.down.sh",
 		},
 		{
-			"q-gram fuzzy match simple",
-			[]string{"--fuzzy-match"},
-			"testdata/rename/02_fuzzy-match.plan.txt",
-			"testdata/rename/02_fuzzy-match.up.sh",
-			"testdata/rename/02_fuzzy-match.down.sh",
+			name:         "q-gram fuzzy match simple",
+			options:      []string{"--fuzzy-match"},
+			planPath:     "testdata/rename/02_fuzzy-match.plan.txt",
+			wantUpPath:   "testdata/rename/02_fuzzy-match.up.sh",
+			wantDownPath: "testdata/rename/02_fuzzy-match.down.sh",
 		},
 		{
-			"q-gram fuzzy match complicated",
-			[]string{"--fuzzy-match"},
-			"testdata/rename/03_fuzzy-match.plan.txt",
-			"testdata/rename/03_fuzzy-match.up.sh",
-			"testdata/rename/03_fuzzy-match.down.sh",
+			name:         "q-gram fuzzy match complicated",
+			options:      []string{"--fuzzy-match"},
+			planPath:     "testdata/rename/03_fuzzy-match.plan.txt",
+			wantUpPath:   "testdata/rename/03_fuzzy-match.up.sh",
+			wantDownPath: "testdata/rename/03_fuzzy-match.down.sh",
 		},
 		{
-			"q-gram fuzzy match complicated (regression)",
-			[]string{"--fuzzy-match"},
-			"testdata/rename/07_fuzzy-match.plan.txt",
-			"testdata/rename/07_fuzzy-match.up.sh",
-			"testdata/rename/07_fuzzy-match.down.sh",
+			name:         "q-gram fuzzy match complicated (regression)",
+			options:      []string{"--fuzzy-match"},
+			planPath:     "testdata/rename/07_fuzzy-match.plan.txt",
+			wantUpPath:   "testdata/rename/07_fuzzy-match.up.sh",
+			wantDownPath: "testdata/rename/07_fuzzy-match.down.sh",
 		},
 	}
 
@@ -77,13 +76,15 @@ func TestRunRenameFailure(t *testing.T) {
 		planPath string
 		wantErr  string
 	}{
-		{"plan file doesn't exist",
-			"nonexisting",
-			"opening the terraform plan file: open nonexisting: no such file or directory",
+		{
+			name:     "plan file doesn't exist",
+			planPath: "nonexisting",
+			wantErr:  "opening the terraform plan file: open nonexisting: no such file or directory",
 		},
-		{"matchExact failure",
-			"testdata/rename/02_fuzzy-match.plan.txt",
-			`matchExact:
+		{
+			name:     "matchExact failure",
+			planPath: "testdata/rename/02_fuzzy-match.plan.txt",
+			wantErr: `matchExact:
 unmatched create:
   aws_route53_record.localhostnames_public["artifactory"]
   aws_route53_record.loopback["artifactory"]
@@ -113,11 +114,11 @@ func TestRunMoveSuccess(t *testing.T) {
 		wantDownPath string
 	}{
 		{
-			"exact match",
-			"testdata/move/04_src-plan.txt",
-			"testdata/move/04_dst-plan.txt",
-			"testdata/move/04_up.sh",
-			"testdata/move/04_down.sh",
+			name:         "exact match",
+			srcPlanPath:  "testdata/move/04_src-plan.txt",
+			dstPlanPath:  "testdata/move/04_dst-plan.txt",
+			wantUpPath:   "testdata/move/04_up.sh",
+			wantDownPath: "testdata/move/04_down.sh",
 		},
 	}
 
@@ -135,33 +136,34 @@ func TestRunMoveSuccess(t *testing.T) {
 
 func TestRunMoveFailure(t *testing.T) {
 	testCases := []struct {
-		name         string
-		srcPlanPath  string
-		dstPlanPath  string
-		wantUpPath   string
-		wantDownPath string
-		wantErr      string
+		name        string
+		srcPlanPath string
+		dstPlanPath string
+		wantErr     string
 	}{
-		{"non existing src-plan",
-			"src-plan-path-dummy",
-			"dst-plan-path-dummy",
-			"want-up-path-dummy",
-			"want-down-path-dummy",
-			"opening the terraform plan file: open src-plan-path-dummy: no such file or directory",
+		{
+			name:        "non existing src-plan",
+			srcPlanPath: "src-plan-path-dummy",
+			dstPlanPath: "dst-plan-path-dummy",
+			wantErr:     "opening the terraform SRC plan file: open src-plan-path-dummy: no such file or directory",
 		},
-		{"src-plan must only destroy",
-			"testdata/move/05_src-plan.txt",
-			"testdata/move/05_dst-plan.txt",
-			"want-up-path-dummy",
-			"want-down-path-dummy",
-			"src-plan contains resources to create: [aws_batch_job_definition.foo]",
+		{
+			name:        "non existing dst-plan",
+			srcPlanPath: "testdata/move/05_src-plan.txt",
+			dstPlanPath: "dst-plan-path-dummy",
+			wantErr:     "opening the terraform DST plan file: open dst-plan-path-dummy: no such file or directory",
 		},
-		{"dst-plan must only create",
-			"testdata/move/06_src-plan.txt",
-			"testdata/move/06_dst-plan.txt",
-			"want-up-path-dummy",
-			"want-down-path-dummy",
-			"dst-plan contains resources to destroy: [aws_batch_job_definition.foo]",
+		{
+			name:        "src-plan must only destroy",
+			srcPlanPath: "testdata/move/05_src-plan.txt",
+			dstPlanPath: "testdata/move/05_dst-plan.txt",
+			wantErr:     "src-plan contains resources to create: [aws_batch_job_definition.foo]",
+		},
+		{
+			name:        "dst-plan must only create",
+			srcPlanPath: "testdata/move/06_src-plan.txt",
+			dstPlanPath: "testdata/move/06_dst-plan.txt",
+			wantErr:     "dst-plan contains resources to destroy: [aws_batch_job_definition.foo]",
 		},
 	}
 
@@ -178,16 +180,16 @@ func TestRunMoveFailure(t *testing.T) {
 }
 
 func runSuccess(t *testing.T, args []string, wantUpPath string, wantDownPath string) {
-	wantUp, err := ioutil.ReadFile(wantUpPath)
+	wantUp, err := os.ReadFile(wantUpPath)
 	if err != nil {
 		t.Fatalf("reading want up file: %v", err)
 	}
-	wantDown, err := ioutil.ReadFile(wantDownPath)
+	wantDown, err := os.ReadFile(wantDownPath)
 	if err != nil {
 		t.Fatalf("reading want down file: %v", err)
 	}
 
-	tmpDir, err := ioutil.TempDir("", "terravalet")
+	tmpDir, err := os.MkdirTemp("", "terravalet")
 	if err != nil {
 		t.Fatalf("creating temporary dir: %v", err)
 	}
@@ -200,32 +202,32 @@ func runSuccess(t *testing.T, args []string, wantUpPath string, wantDownPath str
 	os.Args = args
 
 	if err := run(); err != nil {
-		t.Fatalf("run: args: %s\ngot:  %q\nwant: no error", args, err)
+		t.Fatalf("run: args: %s\nhave: %q\nwant: no error", args, err)
 	}
 
-	tmpUp, err := ioutil.ReadFile(tmpUpPath)
+	tmpUp, err := os.ReadFile(tmpUpPath)
 	if err != nil {
 		t.Fatalf("reading tmp up file: %v", err)
 	}
-	tmpDown, err := ioutil.ReadFile(tmpDownPath)
+	tmpDown, err := os.ReadFile(tmpDownPath)
 	if err != nil {
 		t.Fatalf("reading tmp down file: %v", err)
 	}
 
 	if diff := cmp.Diff(string(wantUp), string(tmpUp)); diff != "" {
-		t.Errorf("\nup script: mismatch (-want +got):\n"+
+		t.Errorf("\nup script: mismatch (-want +have):\n"+
 			"(want path: %s)\n"+
 			"%s", wantUpPath, diff)
 	}
 	if diff := cmp.Diff(string(wantDown), string(tmpDown)); diff != "" {
-		t.Errorf("\ndown script: mismatch (-want +got):\n"+
+		t.Errorf("\ndown script: mismatch (-want +have):\n"+
 			"(want path: %s)\n"+
 			"%s", wantDownPath, diff)
 	}
 }
 
 func runFailure(t *testing.T, args []string, wantErr string) {
-	tmpDir, err := ioutil.TempDir("", "terravalet")
+	tmpDir, err := os.MkdirTemp("", "terravalet")
 	if err != nil {
 		t.Fatalf("creating temporary dir: %v", err)
 	}
@@ -240,7 +242,7 @@ func runFailure(t *testing.T, args []string, wantErr string) {
 	err = run()
 
 	if err == nil {
-		t.Fatalf("run: args: %s\ngot:  no error\nwant: %q", args, err)
+		t.Fatalf("run: args: %s\nhave: no error\nwant: %q", args, err)
 	}
 	if diff := cmp.Diff(wantErr, err.Error()); diff != "" {
 		t.Errorf("error message mismatch (-want +have):\n%s", diff)
@@ -260,22 +262,22 @@ func TestParseSuccess(t *testing.T) {
 		wantDestroy *strset.Set
 	}{
 		{
-			"destroyed is recorded",
-			"  # aws_instance.bar will be destroyed",
-			set.NewStringSet(),
-			set.NewStringSet("aws_instance.bar"),
+			name:        "destroyed is recorded",
+			line:        "  # aws_instance.bar will be destroyed",
+			wantCreate:  set.NewStringSet(),
+			wantDestroy: set.NewStringSet("aws_instance.bar"),
 		},
 		{
-			"created is recorded",
-			"  # aws_instance.bar will be created",
-			set.NewStringSet("aws_instance.bar"),
-			set.NewStringSet(),
+			name:        "created is recorded",
+			line:        "  # aws_instance.bar will be created",
+			wantCreate:  set.NewStringSet("aws_instance.bar"),
+			wantDestroy: set.NewStringSet(),
 		},
 		{
-			"read is skipped",
-			"  # data.foo.bar will be read during apply",
-			set.NewStringSet(),
-			set.NewStringSet(),
+			name:        "read is skipped",
+			line:        "  # data.foo.bar will be read during apply",
+			wantCreate:  set.NewStringSet(),
+			wantDestroy: set.NewStringSet(),
 		},
 	}
 
@@ -283,16 +285,16 @@ func TestParseSuccess(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			rd := strings.NewReader(tc.line)
 
-			gotCreate, gotDestroy, err := parse(rd)
+			haveCreate, haveDestroy, err := parse(rd)
 
 			if err != nil {
-				t.Fatalf("\ngot:  %q\nwant: no error", err)
+				t.Fatalf("\nhave: %q\nwant: no error", err)
 			}
-			if diff := cmp.Diff(tc.wantCreate, gotCreate, setCmp); diff != "" {
-				t.Errorf("\ncreate: mismatch (-want +got):\n%s", diff)
+			if diff := cmp.Diff(tc.wantCreate, haveCreate, setCmp); diff != "" {
+				t.Errorf("\ncreate: mismatch (-want +have):\n%s", diff)
 			}
-			if diff := cmp.Diff(tc.wantDestroy, gotDestroy, setCmp); diff != "" {
-				t.Errorf("\ndestroy: mismatch (-want +got):\n%s", diff)
+			if diff := cmp.Diff(tc.wantDestroy, haveDestroy, setCmp); diff != "" {
+				t.Errorf("\ndestroy: mismatch (-want +have):\n%s", diff)
 			}
 		})
 	}
@@ -305,9 +307,9 @@ func TestParseFailure(t *testing.T) {
 		wantErr string
 	}{
 		{
-			"vaporized is not an expected action",
-			"  # aws_instance.bar will be vaporized",
-			`line "  # aws_instance.bar will be vaporized", unexpected action "vaporized"`,
+			name:    "vaporized is not an expected action",
+			line:    "  # aws_instance.bar will be vaporized",
+			wantErr: `line "  # aws_instance.bar will be vaporized", unexpected action "vaporized"`,
 		},
 	}
 
@@ -318,7 +320,7 @@ func TestParseFailure(t *testing.T) {
 			_, _, err := parse(rd)
 
 			if err == nil {
-				t.Fatalf("\ngot:  no error\nwant: %q", tc.wantErr)
+				t.Fatalf("\nhave: no error\nwant: %q", tc.wantErr)
 			}
 			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
 				t.Errorf("error message mismatch (-want +have):\n%s", diff)
@@ -335,35 +337,37 @@ func TestMatchExactZeroUnmatched(t *testing.T) {
 		wantUpMatches   map[string]string
 		wantDownMatches map[string]string
 	}{
-		{"increase depth, len 1",
-			set.NewStringSet("a.b"),
-			set.NewStringSet("b"),
-			map[string]string{"b": "a.b"},
-			map[string]string{"a.b": "b"},
+		{
+			name:            "increase depth, len 1",
+			create:          set.NewStringSet("a.b"),
+			destroy:         set.NewStringSet("b"),
+			wantUpMatches:   map[string]string{"b": "a.b"},
+			wantDownMatches: map[string]string{"a.b": "b"},
 		},
-		{"decrease depth, len 1",
-			set.NewStringSet("b"),
-			set.NewStringSet("a.b"),
-			map[string]string{"a.b": "b"},
-			map[string]string{"b": "a.b"},
+		{
+			name:            "decrease depth, len 1",
+			create:          set.NewStringSet("b"),
+			destroy:         set.NewStringSet("a.b"),
+			wantUpMatches:   map[string]string{"a.b": "b"},
+			wantDownMatches: map[string]string{"b": "a.b"},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			gotUpMatches, gotDownMatches := matchExact(tc.create, tc.destroy)
+			haveUpMatches, haveDownMatches := matchExact(tc.create, tc.destroy)
 
-			if diff := cmp.Diff(tc.wantUpMatches, gotUpMatches); diff != "" {
-				t.Errorf("\nupMatches: mismatch (-want +got):\n%s", diff)
+			if diff := cmp.Diff(tc.wantUpMatches, haveUpMatches); diff != "" {
+				t.Errorf("\nupMatches: mismatch (-want +have):\n%s", diff)
 			}
-			if diff := cmp.Diff(tc.wantDownMatches, gotDownMatches); diff != "" {
-				t.Errorf("\ndownMatches: mismatch (-want +got):\n%s", diff)
+			if diff := cmp.Diff(tc.wantDownMatches, haveDownMatches); diff != "" {
+				t.Errorf("\ndownMatches: mismatch (-want +have):\n%s", diff)
 			}
-			if got := tc.create.Size(); got != 0 {
-				t.Errorf("\nsize(create): got: %d; want: 0", got)
+			if have := tc.create.Size(); have != 0 {
+				t.Errorf("\nsize(create): have: %d; want: 0", have)
 			}
-			if got := tc.destroy.Size(); got != 0 {
-				t.Errorf("\nsize(destroy): got: %d; want: 0", got)
+			if have := tc.destroy.Size(); have != 0 {
+				t.Errorf("\nsize(destroy): have: %d; want: 0", have)
 			}
 		})
 	}
@@ -377,23 +381,26 @@ func TestMatchExactSomeUnmatched(t *testing.T) {
 		wantCreate  *strset.Set
 		wantDestroy *strset.Set
 	}{
-		{"len(create) == len(destroy), no match",
-			set.NewStringSet("a.b"),
-			set.NewStringSet("j.k"),
-			set.NewStringSet("a.b"),
-			set.NewStringSet("j.k"),
+		{
+			name:        "len(create) == len(destroy), no match",
+			create:      set.NewStringSet("a.b"),
+			destroy:     set.NewStringSet("j.k"),
+			wantCreate:  set.NewStringSet("a.b"),
+			wantDestroy: set.NewStringSet("j.k"),
 		},
-		{"len(create) > len(destroy), match",
-			set.NewStringSet("a.b", "a.j.k"),
-			set.NewStringSet("j.k"),
-			set.NewStringSet("a.b"),
-			set.NewStringSet(),
+		{
+			name:        "len(create) > len(destroy), match",
+			create:      set.NewStringSet("a.b", "a.j.k"),
+			destroy:     set.NewStringSet("j.k"),
+			wantCreate:  set.NewStringSet("a.b"),
+			wantDestroy: set.NewStringSet(),
 		},
-		{"len(create) < len(destroy), match",
-			set.NewStringSet("a.b"),
-			set.NewStringSet("j.k", "x.a.b"),
-			set.NewStringSet(),
-			set.NewStringSet("j.k"),
+		{
+			name:        "len(create) < len(destroy), match",
+			create:      set.NewStringSet("a.b"),
+			destroy:     set.NewStringSet("j.k", "x.a.b"),
+			wantCreate:  set.NewStringSet(),
+			wantDestroy: set.NewStringSet("j.k"),
 		},
 	}
 
@@ -402,10 +409,10 @@ func TestMatchExactSomeUnmatched(t *testing.T) {
 			matchExact(tc.create, tc.destroy)
 
 			if diff := cmp.Diff(tc.wantCreate, tc.create, setCmp); diff != "" {
-				t.Errorf("\nUnmatched create: (-want +got):\n%s", diff)
+				t.Errorf("\nUnmatched create: (-want +have):\n%s", diff)
 			}
 			if diff := cmp.Diff(tc.wantDestroy, tc.destroy, setCmp); diff != "" {
-				t.Errorf("\nUnmatched destroy (-want +got):\n%s", diff)
+				t.Errorf("\nUnmatched destroy (-want +have):\n%s", diff)
 			}
 		})
 	}
@@ -419,26 +426,28 @@ func TestMatchFuzzyZeroUnmatched(t *testing.T) {
 		wantUpMatches   map[string]string
 		wantDownMatches map[string]string
 	}{
-		{"1 fuzzy match",
-			set.NewStringSet(`foo.loopback["bar"]`),
-			set.NewStringSet(`foo.bar_loopback`),
-			map[string]string{`foo.bar_loopback`: `foo.loopback["bar"]`},
-			map[string]string{`foo.loopback["bar"]`: `foo.bar_loopback`},
+		{
+			name:            "1 fuzzy match",
+			create:          set.NewStringSet(`foo.loopback["bar"]`),
+			destroy:         set.NewStringSet(`foo.bar_loopback`),
+			wantUpMatches:   map[string]string{`foo.bar_loopback`: `foo.loopback["bar"]`},
+			wantDownMatches: map[string]string{`foo.loopback["bar"]`: `foo.bar_loopback`},
 		},
-		{"3 fuzzy matches",
-			set.NewStringSet(
+		{
+			name: "3 fuzzy matches",
+			create: set.NewStringSet(
 				`foo.loopback["bar"]`,
 				`foo.private["bar"]`,
 				`foo.public["bar"]`),
-			set.NewStringSet(
+			destroy: set.NewStringSet(
 				`foo.bar_loopback`,
 				`foo.bar_private`,
 				`foo.bar`),
-			map[string]string{
+			wantUpMatches: map[string]string{
 				`foo.bar_loopback`: `foo.loopback["bar"]`,
 				`foo.bar_private`:  `foo.private["bar"]`,
 				`foo.bar`:          `foo.public["bar"]`},
-			map[string]string{
+			wantDownMatches: map[string]string{
 				`foo.loopback["bar"]`: `foo.bar_loopback`,
 				`foo.private["bar"]`:  `foo.bar_private`,
 				`foo.public["bar"]`:   `foo.bar`},
@@ -448,22 +457,22 @@ func TestMatchFuzzyZeroUnmatched(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 
-			gotUpMatches, gotDownMatches, err := matchFuzzy(tc.create, tc.destroy)
+			haveUpMatches, haveDownMatches, err := matchFuzzy(tc.create, tc.destroy)
 			if err != nil {
-				t.Fatalf("got: %s; want: no error", err)
+				t.Fatalf("have: %s; want: no error", err)
 			}
 
-			if diff := cmp.Diff(tc.wantUpMatches, gotUpMatches); diff != "" {
-				t.Errorf("\nupMatches: mismatch (-want +got):\n%s", diff)
+			if diff := cmp.Diff(tc.wantUpMatches, haveUpMatches); diff != "" {
+				t.Errorf("\nupMatches: mismatch (-want +have):\n%s", diff)
 			}
-			if diff := cmp.Diff(tc.wantDownMatches, gotDownMatches); diff != "" {
-				t.Errorf("\ndownMatches: mismatch (-want +got):\n%s", diff)
+			if diff := cmp.Diff(tc.wantDownMatches, haveDownMatches); diff != "" {
+				t.Errorf("\ndownMatches: mismatch (-want +have):\n%s", diff)
 			}
-			if got := tc.create.Size(); got != 0 {
-				t.Errorf("\nsize(create): got: %d; want: 0", got)
+			if have := tc.create.Size(); have != 0 {
+				t.Errorf("\nsize(create): have: %d; want: 0", have)
 			}
-			if got := tc.destroy.Size(); got != 0 {
-				t.Errorf("\nsize(destroy): got: %d; want: 0", got)
+			if have := tc.destroy.Size(); have != 0 {
+				t.Errorf("\nsize(destroy): have: %d; want: 0", have)
 			}
 		})
 	}
@@ -474,24 +483,24 @@ func TestMatchFuzzyError(t *testing.T) {
 	destroy := set.NewStringSet(`abdcde`, `hfjabd`)
 	_, _, err := matchFuzzy(create, destroy)
 	if err == nil {
-		t.Fatalf("got: no error; want: an ambiguous migration error")
+		t.Fatalf("have: no error; want: an ambiguous migration error")
 	}
 
-	gotMsg := err.Error()
+	haveMsg := err.Error()
 	var msg string
 
 	want := "ambiguous migration:"
-	if !strings.HasPrefix(gotMsg, want) {
+	if !strings.HasPrefix(haveMsg, want) {
 		msg += fmt.Sprintf("error message does not start with %q\n", want)
 	}
 
 	want = "{abcde} -> {abdcde}"
-	if !strings.Contains(gotMsg, want) {
+	if !strings.Contains(haveMsg, want) {
 		msg += fmt.Sprintf("error message does not contain %q", want)
 	}
 
 	want = "{abdecde} -> {abdcde}"
-	if !strings.Contains(gotMsg, want) {
+	if !strings.Contains(haveMsg, want) {
 		msg += fmt.Sprintf("error message does not contain %q", want)
 	}
 
@@ -509,11 +518,11 @@ func TestRunImportSuccess(t *testing.T) {
 		wantDownPath string
 	}{
 		{
-			"import resources",
-			"testdata/import/terravalet_imports_definitions.json",
-			"testdata/import/08_import_src-plan.json",
-			"testdata/import/08_import_up.sh",
-			"testdata/import/08_import_down.sh",
+			name:         "import resources",
+			resDefs:      "testdata/import/terravalet_imports_definitions.json",
+			srcPlanPath:  "testdata/import/08_import_src-plan.json",
+			wantUpPath:   "testdata/import/08_import_up.sh",
+			wantDownPath: "testdata/import/08_import_down.sh",
 		},
 	}
 
@@ -536,40 +545,47 @@ func TestRunImportFailure(t *testing.T) {
 		srcPlanPath string
 		wantErr     string
 	}{
-		{"non existing src-plan",
-			"testdata/import/terravalet_imports_definitions.json",
-			"src-plan-path-dummy",
-			"opening the terraform plan file: open src-plan-path-dummy: no such file or directory",
+		{
+			name:        "non existing src-plan",
+			resDefs:     "testdata/import/terravalet_imports_definitions.json",
+			srcPlanPath: "src-plan-path-dummy",
+			wantErr:     "opening the terraform plan file: open src-plan-path-dummy: no such file or directory",
 		},
-		{"src-plan is invalid json",
-			"testdata/import/terravalet_imports_definitions.json",
-			"testdata/import/09_import_empty_src-plan.json",
-			"parse src-plan: parsing the plan: unexpected end of JSON input",
+		{
+			name:        "src-plan is invalid json",
+			resDefs:     "testdata/import/terravalet_imports_definitions.json",
+			srcPlanPath: "testdata/import/09_import_empty_src-plan.json",
+			wantErr:     "parse src-plan: parsing the plan: unexpected end of JSON input",
 		},
-		{"src-plan must create resource",
-			"testdata/import/terravalet_imports_definitions.json",
-			"testdata/import/10_import_no-new-resources.json",
-			"parse src-plan: src-plan doesn't contains resources to create",
+		{
+			name:        "src-plan must create resource",
+			resDefs:     "testdata/import/terravalet_imports_definitions.json",
+			srcPlanPath: "testdata/import/10_import_no-new-resources.json",
+			wantErr:     "parse src-plan: src-plan doesn't contains resources to create",
 		},
-		{"src-plan contains only undefined resources",
-			"testdata/import/terravalet_imports_definitions.json",
-			"testdata/import/11_import_src-plan_undefined_resources.json",
-			"parse src-plan: src-plan contains only undefined resources",
+		{
+			name:        "src-plan contains only undefined resources",
+			resDefs:     "testdata/import/terravalet_imports_definitions.json",
+			srcPlanPath: "testdata/import/11_import_src-plan_undefined_resources.json",
+			wantErr:     "parse src-plan: src-plan contains only undefined resources",
 		},
-		{"src-plan contains a not existing resource parameter",
-			"testdata/import/terravalet_imports_definitions.json",
-			"testdata/import/12_import_src-plan_invalid_resource_param.json",
-			"parse src-plan: error in resources definition dummy_resource2: field 'long_name' doesn't exist in plan",
+		{
+			name:        "src-plan contains a not existing resource parameter",
+			resDefs:     "testdata/import/terravalet_imports_definitions.json",
+			srcPlanPath: "testdata/import/12_import_src-plan_invalid_resource_param.json",
+			wantErr:     "parse src-plan: error in resources definition dummy_resource2: field 'long_name' doesn't exist in plan",
 		},
-		{"terravalet missing resources definitions file",
-			"testdata/import/missing.file",
-			"testdata/import/08_import_src-plan.json",
-			"opening the definitions file: open testdata/import/missing.file: no such file or directory",
+		{
+			name:        "terravalet missing resources definitions file",
+			resDefs:     "testdata/import/missing.file",
+			srcPlanPath: "testdata/import/08_import_src-plan.json",
+			wantErr:     "opening the definitions file: open testdata/import/missing.file: no such file or directory",
 		},
-		{"terravalet invalid resources definitions file",
-			"testdata/import/invalid_imports_definitions.json",
-			"testdata/import/08_import_src-plan.json",
-			"parse src-plan: parsing resources definitions: invalid character '}' after object key",
+		{
+			name:        "terravalet invalid resources definitions file",
+			resDefs:     "testdata/import/invalid_imports_definitions.json",
+			srcPlanPath: "testdata/import/08_import_src-plan.json",
+			wantErr:     "parse src-plan: parsing resources definitions: invalid character '}' after object key",
 		},
 	}
 

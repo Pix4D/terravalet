@@ -18,16 +18,16 @@ The project follows [semantic versioning](https://semver.org/). In particular, w
 
 The overall approach is for Terravalet to generate migration scripts, not to perform any change directly. This for two reasons:
 
-1. Safety. The operator can review the generated migration scripts for correctness.
+1. Safety. The operator can review the migration scripts for correctness.
 2. Gitops-style. The migration scripts are meant to be stored in git in the same branch (and thus same PR) that performs the Terraform changes and can optionally be hooked to an automatic deployment system.
 
-Terravalet takes as input the output of `terraform plan` per each involved root module and generates one UP and one DOWN migration script.
+Terravalet takes as input the output of `terraform plan` for each involved root module and generates one UP and one DOWN migration script.
 
 ### Remote and local state
 
-At least until Terraform 0.14, `terraform state mv` has a bug: if a remote backend for the state is configured (which will always be the case for prod), it will remove entries from the remote state but it will not add entries to it. It will fail silently and leave an empty backup file, so you loose your state.
+At least until Terraform 0.14, `terraform state mv` has a bug: if a remote backend for the state is configured (which will always be the case for prod), it will remove entries from the remote state but it will not add entries to it. It will fail silently and leave an empty backup file, so you will loose your state.
 
-For this reason Terravalet operates on local state and leaves to the operator to perform `terraform state pull` and `terraform state push`.
+For this reason Terravalet operates on local state and leaves to the operator the task of performing `terraform state pull` and `terraform state push`.
 
 ### Terraform workspaces
 
@@ -38,12 +38,12 @@ Be careful when using Terraform workspaces, since they are invisible and persist
 ### Install from binary package
 
 1. Download the archive for your platform from the [releases page](https://github.com/Pix4D/terravalet/releases).
-2. Unarchive and copy the `terravalet` executable somewhere in your `$PATH`.
+2. Unarchive and copy the `terravalet` executable to a directory in your `$PATH`.
 
 ### Install from source
 
 1. Install [Go](https://golang.org/).
-2. Install [task](https://taskfile.dev/).
+2. Install [Task](https://taskfile.dev/).
 3. Run `task`:
    ```
    $ task test build
@@ -53,20 +53,21 @@ Be careful when using Terraform workspaces, since they are invisible and persist
 ## Usage
 
 There are three modes of operation:
-- [Rename resources](#rename-resources-within-the-same-state) within the same state, with optional fuzzy match.
-- [Move resources](#-move-resources-from-one-state-to-another) from one state to another.
+
+- [Rename resources](#rename-resources-within-the-same-state) within the same Terraform state, with optional fuzzy match.
+- [Move resources](#-move-resources-from-one-state-to-another) from one Terraform state to another.
 - [Import existing resources](#-import-existing-resources) into Terraform state.
 
 they will be explained in the following sections.
 
-You can also look at the tests and in particular at the files below testdata/ for a rough idea.
+You can also look at the tests and in particular at the files below [testdata/](testdata) for a rough idea.
 
 # Rename resources within the same state
 
 Only one Terraform root module (and thus only one state) is involved. This actually covers two different use cases:
 
 1. Renaming resources within the same root module.
-2. Moving resources to/from a non-root Terraform module (this will actually _rename_ the resources, since they will get or loose the `module.` prefix).
+2. Moving resources to/from a non-root Terraform module (this will actually _rename_ the resources, since they will get or lose the `module.` prefix).
 
 ## Collect information and remote state
 
@@ -337,11 +338,13 @@ The idea is to tell Terravalet where to search the data to build the up/down scr
 ## Error cases
 
 Ignorable errors:
-1. Resource X doesn't exists yet, it resides only in new terraform configuration.
-2. Resource X exists, but depends on resource Y that has not been imported yet (should be fine setting the priority)
 
-NOT ignorable errors:
-1. Provider specific argument ID is wrong
+1. Resource X doesn't exists yet, it resides only in new terraform configuration.
+2. Resource X exists, but depends on resource Y that has not been imported yet (should be fine setting the priority).
+
+NON ignorable errors:
+
+1. Provider specific argument ID is wrong.
 
 # Making a release
 
