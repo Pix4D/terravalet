@@ -141,6 +141,58 @@ func doMoveAfter(script, before, after string) error {
 	return nil
 }
 
+func doMoveBefore(script, before, after string) error {
+	beforePlanPath := before + ".tfplan"
+	beforePlanFile, err := os.Open(beforePlanPath)
+	if err != nil {
+		return fmt.Errorf("opening the terraform BEFORE plan file: %v", err)
+	}
+	defer beforePlanFile.Close()
+
+	upPath := script + "_up.sh"
+	upFile, err := os.Create(upPath)
+	if err != nil {
+		return fmt.Errorf("creating the up file: %v", err)
+	}
+	defer upFile.Close()
+
+	downPath := script + "_down.sh"
+	downFile, err := os.Create(downPath)
+	if err != nil {
+		return fmt.Errorf("creating the down file: %v", err)
+	}
+	defer downFile.Close()
+
+	beforeCreate, beforeDestroy, err := parse(beforePlanFile)
+	if err != nil {
+		return fmt.Errorf("parse BEFORE plan: %v", err)
+	}
+	if beforeCreate.Size() == 0 {
+		return fmt.Errorf("BEFORE plan does not contain resources to create")
+	}
+	if beforeDestroy.Size() > 0 {
+		return fmt.Errorf("BEFORE plan contains resources to destroy: %s",
+			sorted(beforeDestroy.List()))
+	}
+
+	upMatches, downMatches := matchExact(beforeCreate, beforeCreate)
+
+	beforeStatePath := before + ".tfstate"
+	afterStatePath := after + ".tfstate"
+
+	upStateFlags := fmt.Sprintf("-state=%s -state-out=%s", afterStatePath, beforeStatePath)
+	downStateFlags := fmt.Sprintf("-state=%s -state-out=%s", beforeStatePath, afterStatePath)
+
+	if err := upDownScript(upMatches, upStateFlags, upFile); err != nil {
+		return fmt.Errorf("writing the up script: %v", err)
+	}
+	if err := upDownScript(downMatches, downStateFlags, downFile); err != nil {
+		return fmt.Errorf("writing the down script: %v", err)
+	}
+
+	return nil
+}
+
 func collectErrors(create *strset.Set, destroy *strset.Set) string {
 	msg := ""
 	if create.Size() != 0 {

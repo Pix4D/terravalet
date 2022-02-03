@@ -1,0 +1,14 @@
+random_pet.prepend: Refreshing state... [id=brave-mole]
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+
+Terraform will perform the following actions:
+
+  # null_resource.res1 will be created
+  + resource "null_resource" "res1" {
+      + id = (known after apply)
+    }
+
+  # aws_batch_compute_environment.foo_batch will be destroyed

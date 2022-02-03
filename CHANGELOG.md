@@ -5,13 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
-### Fixes
-### Breaking changes
-### Changes
+## [v0.7.0] - (Unreleased)
+
 ### New
 
-## [v0.6.2] - (Unreleased)
+- New command `move-before`, to move resources to a root environment upstream in the dependency chain (see README for details):
+  ```
+  $ terravalet move-before -h
+  Usage: terravalet move-before --script SCRIPT --before BEFORE --after AFTER
+  Options:
+  --script SCRIPT    the migration scripts; will generate SCRIPT_up.sh and SCRIPT_down.sh
+  --before BEFORE    the before root directory; will look for BEFORE.tfplan and BEFORE.tfstate
+  --after AFTER      the after root directory; will look for AFTER.tfstate
+  ```
+
+- Simplify workflow for state move (see README for details).
+
+### Breaking changes
+
+- Rename command `move` to `move-after` (to be uniform with the new command `move-before`).
+- Command `move-after` now takes 3 (different) CLI options instead of the previous 6:
+  ```
+  $ terravalet move-after -h
+  Usage: terravalet move-after --script SCRIPT --before BEFORE --after AFTER
+  Options:
+  --script SCRIPT    the migration scripts; will generate SCRIPT_up.sh and SCRIPT_down.sh
+  --before BEFORE    the before root directory; will look for BEFORE.tfplan and BEFORE.tfstate
+  --after AFTER      the after root directory; will look for BEFORE.tfstate and AFTER.tfstate
+  ```
 
 ### Changes
 
@@ -53,8 +74,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved Fuzzy matching selection algorithm to iteratively consume the best matching create/destroy combination.
 
 ## [v0.4.0] - (2021-01-25)
-
-### Fixes
 
 ### Breaking changes
 
@@ -133,3 +152,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [v0.4.0]: https://github.com/Pix4D/terravalet/releases/tag/v0.4.0
 [v0.5.0]: https://github.com/Pix4D/terravalet/releases/tag/v0.5.0
 [v0.6.0]: https://github.com/Pix4D/terravalet/releases/tag/v0.6.0
+[v0.6.1]: https://github.com/Pix4D/terravalet/releases/tag/v0.6.1
+[v0.7.0]: https://github.com/Pix4D/terravalet/releases/tag/v0.7.0
+

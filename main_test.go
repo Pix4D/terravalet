@@ -175,11 +175,60 @@ func TestRunMoveAfterFailure(t *testing.T) {
 }
 
 func TestRunMoveBeforeSuccess(t *testing.T) {
+	testCases := []struct {
+		name       string
+		before     string
+		after      string // special prefix: dummy
+		wantScript string
+	}{
+		{
+			name:       "happy path simple",
+			before:     "testdata/move-before/01-before",
+			after:      "dummy-01-after",
+			wantScript: "testdata/move-before/01-want",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			args := []string{"terravalet", "move-before"}
+
+			runMoveSuccess(t, args, tc.before, tc.after, tc.wantScript)
+		})
+	}
 }
 
 func TestRunMoveBeforeFailure(t *testing.T) {
+	testCases := []struct {
+		name    string
+		before  string // special value: "non-existing"
+		wantErr string
+	}{
+		{
+			name:    "non existing BEFORE plan",
+			before:  "non-existing",
+			wantErr: "opening the terraform BEFORE plan file: open non-existing.tfplan: no such file or directory",
+		},
+		{
+			name:    "BEFORE plan must not contain resources to destroy",
+			before:  "testdata/move-before/02-before",
+			wantErr: "BEFORE plan contains resources to destroy: [aws_batch_compute_environment.foo_batch]",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			args := []string{"terravalet", "move-before",
+				"--before=" + tc.before, "--after=testdata/move-before/dummy-after",
+			}
+
+			runMoveFailure(t, args, tc.before, "non-existing", tc.wantErr)
+		})
+	}
 }
 
+// If after has special prefix "dummy", it will not attempt to copy the
+// corresponding tfplan files, to accomodate for move-before.
 func runMoveSuccess(t *testing.T, args []string, before, after, wantScript string) {
 	wantUpPath := wantScript + "_up.sh"
 	wantUp, err := os.ReadFile(wantUpPath)
@@ -204,9 +253,11 @@ func runMoveSuccess(t *testing.T, args []string, before, after, wantScript strin
 		filepath.Join(tmpDir, path.Base(before)+".tfplan")); err != nil {
 		t.Fatal(err)
 	}
-	if err := copyfile(after+".tfplan",
-		filepath.Join(tmpDir, path.Base(after)+".tfplan")); err != nil {
-		t.Fatal(err)
+	if !strings.HasPrefix(after, "dummy") {
+		if err := copyfile(after+".tfplan",
+			filepath.Join(tmpDir, path.Base(after)+".tfplan")); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	// Change directory to the tmpdir.
