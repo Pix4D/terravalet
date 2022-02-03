@@ -23,10 +23,10 @@ func main() {
 }
 
 type args struct {
-	Rename     *RenameCmd     `arg:"subcommand:rename" help:"rename resources in the same root environment"`
-	MoveAfter  *MoveAfterCmd  `arg:"subcommand:move-after" help:"move resources from one root environment to AFTER another"`
-	Import     *ImportCmd     `arg:"subcommand:import" help:"import resources generated out-of-band of Terraform"`
-	Version    *struct{}      `arg:"subcommand:version" help:"show version"`
+	Rename    *RenameCmd    `arg:"subcommand:rename" help:"rename resources in the same root environment"`
+	MoveAfter *MoveAfterCmd `arg:"subcommand:move-after" help:"move resources from one root environment to AFTER another"`
+	Import    *ImportCmd    `arg:"subcommand:import" help:"import resources generated out-of-band of Terraform"`
+	Version   *struct{}     `arg:"subcommand:version" help:"show version"`
 }
 
 func (args) Description() string {
@@ -46,11 +46,9 @@ type RenameCmd struct {
 }
 
 type MoveAfterCmd struct {
-	UpDown
-	SrcPlanPath  string `arg:"--src-plan,required" help:"path to the SRC terraform plan"`
-	DstPlanPath  string `arg:"--dst-plan,required" help:"path to the DST terraform plan"`
-	SrcStatePath string `arg:"--src-state,required" help:"path to the SRC local state to modify"`
-	DstStatePath string `arg:"--dst-state,required" help:"path to the DST local state to modify"`
+	Script string `arg:"required" help:"the migration scripts; will generate SCRIPT_up.sh and SCRIPT_down.sh"`
+	Before string `arg:"required" help:"the before root directory; will look for BEFORE.tfplan and BEFORE.tfstate"`
+	After  string `arg:"required" help:"the after root directory; will look for AFTER.tfplan and AFTER.tfstate"`
 }
 
 type ImportCmd struct {
@@ -73,9 +71,7 @@ func run() error {
 			args.Rename.PlanPath, args.Rename.LocalStatePath, args.Rename.FuzzyMatch)
 	case args.MoveAfter != nil:
 		cmd := args.MoveAfter
-		return doMoveAfter(cmd.Up, cmd.Down,
-			cmd.SrcPlanPath, cmd.DstPlanPath,
-			cmd.SrcStatePath, cmd.DstStatePath)
+		return doMoveAfter(cmd.Script, cmd.Before, cmd.After)
 	case args.Import != nil:
 		return doImport(args.Import.Up, args.Import.Down,
 			args.Import.SrcPlanPath, args.Import.ResourceDefs)

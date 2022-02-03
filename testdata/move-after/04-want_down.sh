@@ -6,15 +6,15 @@
 
 set -e
 
-terraform state mv -lock=false -state=src-dummy -state-out=dst-dummy \
+terraform state mv -lock=false -state=04-after.tfstate -state-out=04-before.tfstate \
     'aws_batch_compute_environment.foo_batch' \
     'aws_batch_compute_environment.foo_batch'
 
-terraform state mv -lock=false -state=src-dummy -state-out=dst-dummy \
+terraform state mv -lock=false -state=04-after.tfstate -state-out=04-before.tfstate \
     'aws_batch_job_definition.foo' \
     'aws_batch_job_definition.foo'
 
-terraform state mv -lock=false -state=src-dummy -state-out=dst-dummy \
+terraform state mv -lock=false -state=04-after.tfstate -state-out=04-before.tfstate \
     'aws_batch_job_queue.foo' \
     'aws_batch_job_queue.foo'
 
