@@ -71,7 +71,7 @@ func doRename(upPath, downPath, planPath, localStatePath string, fuzzyMatch bool
 	return nil
 }
 
-func doMove(upPath, downPath, srcPlanPath, dstPlanPath, srcStatePath, dstStatePath string) error {
+func doMoveAfter(upPath, downPath, srcPlanPath, dstPlanPath, srcStatePath, dstStatePath string) error {
 	// We need to read srcPlanPath and dstPlanPath, while we treat as opaque
 	// srcStatePath and dstStatePath
 	srcPlanFile, err := os.Open(srcPlanPath)
@@ -103,7 +103,7 @@ func doMove(upPath, downPath, srcPlanPath, dstPlanPath, srcStatePath, dstStatePa
 		return fmt.Errorf("parse src-plan: %v", err)
 	}
 	if srcCreate.Size() > 0 {
-		return fmt.Errorf("src-plan contains resources to create: %v", srcCreate.List())
+		return fmt.Errorf("src-plan contains resources to create: %v", sorted(srcCreate.List()))
 	}
 
 	dstCreate, dstDestroy, err := parse(dstPlanFile)
@@ -111,7 +111,7 @@ func doMove(upPath, downPath, srcPlanPath, dstPlanPath, srcStatePath, dstStatePa
 		return fmt.Errorf("parse dst-plan: %v", err)
 	}
 	if dstDestroy.Size() > 0 {
-		return fmt.Errorf("dst-plan contains resources to destroy: %v", dstDestroy.List())
+		return fmt.Errorf("dst-plan contains resources to destroy: %v", sorted(dstDestroy.List()))
 	}
 
 	upMatches, downMatches := matchExact(dstCreate, srcDestroy)
@@ -137,14 +137,10 @@ func doMove(upPath, downPath, srcPlanPath, dstPlanPath, srcStatePath, dstStatePa
 func collectErrors(create *strset.Set, destroy *strset.Set) string {
 	msg := ""
 	if create.Size() != 0 {
-		elems := create.List()
-		sort.Strings(elems)
-		msg += "\nunmatched create:\n  " + strings.Join(elems, "\n  ")
+		msg += "\nunmatched create:\n  " + strings.Join(sorted(create.List()), "\n  ")
 	}
 	if destroy.Size() != 0 {
-		elems := destroy.List()
-		sort.Strings(elems)
-		msg += "\nunmatched destroy:\n  " + strings.Join(elems, "\n  ")
+		msg += "\nunmatched destroy:\n  " + strings.Join(sorted(destroy.List()), "\n  ")
 	}
 	return msg
 }
@@ -326,4 +322,20 @@ func upDownScript(matches map[string]string, stateFlags string, out io.Writer) e
 		i++
 	}
 	return nil
+}
+
+// sorted returns a sorted slice of strings.
+// Useful to be able to write
+//
+//   ... sorted(create.List()) ...
+//
+// instead of
+//
+//   elems := create.List()
+//   sort.Strings(elems)
+//   ... elems ...
+//
+func sorted(in []string) []string {
+	sort.Strings(in)
+	return in
 }

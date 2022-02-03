@@ -23,10 +23,10 @@ func main() {
 }
 
 type args struct {
-	Rename  *RenameCmd `arg:"subcommand:rename" help:"rename resources in the same root environment"`
-	Move    *MoveCmd   `arg:"subcommand:move" help:"move resources from one root environment to another"`
-	Import  *ImportCmd `arg:"subcommand:import" help:"import resources generated out-of-band of Terraform"`
-	Version *struct{}  `arg:"subcommand:version" help:"show version"`
+	Rename     *RenameCmd     `arg:"subcommand:rename" help:"rename resources in the same root environment"`
+	MoveAfter  *MoveAfterCmd  `arg:"subcommand:move-after" help:"move resources from one root environment to AFTER another"`
+	Import     *ImportCmd     `arg:"subcommand:import" help:"import resources generated out-of-band of Terraform"`
+	Version    *struct{}      `arg:"subcommand:version" help:"show version"`
 }
 
 func (args) Description() string {
@@ -45,7 +45,7 @@ type RenameCmd struct {
 	FuzzyMatch     bool   `arg:"--fuzzy-match" help:"enable q-gram distance fuzzy matching. WARNING: You must validate by hand the output!"`
 }
 
-type MoveCmd struct {
+type MoveAfterCmd struct {
 	UpDown
 	SrcPlanPath  string `arg:"--src-plan,required" help:"path to the SRC terraform plan"`
 	DstPlanPath  string `arg:"--dst-plan,required" help:"path to the DST terraform plan"`
@@ -71,10 +71,11 @@ func run() error {
 	case args.Rename != nil:
 		return doRename(args.Rename.Up, args.Rename.Down,
 			args.Rename.PlanPath, args.Rename.LocalStatePath, args.Rename.FuzzyMatch)
-	case args.Move != nil:
-		return doMove(args.Move.Up, args.Move.Down,
-			args.Move.SrcPlanPath, args.Move.DstPlanPath,
-			args.Move.SrcStatePath, args.Move.DstStatePath)
+	case args.MoveAfter != nil:
+		cmd := args.MoveAfter
+		return doMoveAfter(cmd.Up, cmd.Down,
+			cmd.SrcPlanPath, cmd.DstPlanPath,
+			cmd.SrcStatePath, cmd.DstStatePath)
 	case args.Import != nil:
 		return doImport(args.Import.Up, args.Import.Down,
 			args.Import.SrcPlanPath, args.Import.ResourceDefs)

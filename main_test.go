@@ -124,9 +124,9 @@ func TestRunMoveAfterSuccess(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			args := []string{"terravalet", "move",
-				"--src-plan", tc.srcPlanPath, "--dst-plan", tc.dstPlanPath,
-				"--src-state", "src-dummy", "--dst-state", "dst-dummy",
+			args := []string{"terravalet", "move-after",
+				"--src-plan=" + tc.srcPlanPath, "--dst-plan=" + tc.dstPlanPath,
+				"--src-state=src-dummy", "--dst-state=dst-dummy",
 			}
 
 			runSuccess(t, args, tc.wantUpPath, tc.wantDownPath)
@@ -169,9 +169,9 @@ func TestRunMoveAfterFailure(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			args := []string{"terravalet", "move",
-				"--src-plan", tc.srcPlanPath, "--dst-plan", tc.dstPlanPath,
-				"--src-state", "src-dummy", "--dst-state", "dst-dummy",
+			args := []string{"terravalet", "move-after",
+				"--src-plan=" + tc.srcPlanPath, "--dst-plan=" + tc.dstPlanPath,
+				"--src-state=src-dummy", "--dst-state=dst-dummy",
 			}
 
 			runFailure(t, args, tc.wantErr)
@@ -242,7 +242,7 @@ func runFailure(t *testing.T, args []string, wantErr string) {
 	err = run()
 
 	if err == nil {
-		t.Fatalf("run: args: %s\nhave: no error\nwant: %q", args, err)
+		t.Fatalf("run: args: %s\nhave: no error\nwant: %q", args, wantErr)
 	}
 	if diff := cmp.Diff(wantErr, err.Error()); diff != "" {
 		t.Errorf("error message mismatch (-want +have):\n%s", diff)
