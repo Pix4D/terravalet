@@ -135,80 +135,107 @@ Push the `local.tfstate.BACK`.
 
 # Move resources from one state to another
 
-Two Terraform root modules (and thus two states) are involved. The names of the resources stay the same, but we move them from the `$SRC_ROOT_MODULE` root module to the `$DST_ROOT_MODULE` root module.
+Two Terraform root modules (and thus two states) are involved. The names of the resources stay the same, but we move them from one root module to another.
+
+## Understanding move-after and move-before
+
+Consider root environment (name `1`), represented as list element:
+
+![](docs/list.png)
+
+There are two ways to split it:
+
+1. By putting some of its contents AFTER itself.
+  ![](docs/list-append.png)
+2. By putting some of its contents BEFORE itself.
+  ![](docs/list-prepend.png)
+
+Move AFTER is more frequent and easier to reason about.
+
+On the other hand, you will know when you need to move BEFORE `terraform plan` in the BEFORE module (1' in the figure above) will fail with a message similar to this one:
+
+```
+Error: Unsupported attribute
+│
+│ on main.tf line 11, in resource "null_resource" "res2":
+│ 11:     dep = data.terraform_remote_state.prepend_p0.outputs.res1_id
+│ data.terraform_remote_state.prepend_p0.outputs is object with 1 attribute "pet"
+│
+│ This object does not have an attribute named "res1_id".
+╵
+```
+
+The error is because we didn't run terraform apply in `p0`, so `p0.outputs` doesn't have yet the attribute `res1_id`.
+
+When this happens and you convince yourself that this is expected and not an error on your part, you can still move the state, by using command `move-before`.
 
 ## Collect information and remote state
 
-Source root:
+Perform all operations in `topdir`, the directory containing the two root modules.
+
+Something like:
 
 ```
-$ cd $SRC_ROOT_MODULE
-$ terraform workspace select $WS
-$ terraform plan -no-color 2>&1 | tee src-plan.txt
-
-$ terraform state pull > local.tfstate
-$ cp local.tfstate local.tfstate.BACK
+topdir/
+    BEFORE/    <== root module
+    AFTER/     <== root module
 ```
 
-Destination root:
+```
+$ terraform -chdir=BEFORE state pull > BEFORE.tfstate
+$ terraform -chdir=AFTER  state pull > AFTER.tfstate
+```
 
 ```
-$ cd $DST_ROOT_MODULE
-$ terraform workspace select $WS
-$ terraform plan -no-color 2>&1 | tee dst-plan.txt
+$ terraform -chdir=BEFORE plan -no-color > BEFORE.tfplan   # this for any move
+$ terraform -chdir=AFTER  plan -no-color > AFTER.tfplan    # this ONLY for move-before
+```
 
-$ terraform state pull > local.tfstate
-$ cp local.tfstate local.tfstate.BACK
+```
+$ cp BEFORE.tfstate BEFORE.tfstate.BACK
+$ cp AFTER.tfstate AFTER.tfstate.BACK
 ```
 
 The backups are needed to recover in case of errors. They must be done now.
 
 ## Generate migration scripts
 
-Take as input the two Terraform plans `src-plan.txt`, `dst-plan.txt`, the two local state files in the corresponding directories and generate UP and DOWN migration scripts.
+Take as input the one or two Terraform plans (BEFORE.tfplan and AFTER.tfplan) and the two state files (BEFORE.tfstate and AFTER.tfstate) and generate the 01-migrate-foo_up.sh and 01-migrate-foo_down.sh migration scripts.
 
-Assuming the following directory layout, where `repo` is the top-level directory and `src` and `dst` are the two Terraform root modules:
-
-```
-repo/
-├── src/
-├── dst/
-```
-
-the generated migration scripts will be easier to understand and portable from one operator to another if you run terravalet from the `repo` directory and use relative paths:
+If move-after:
 
 ```
-$ cd repo
-$ terravalet move \
-    --src-plan  src/src-plan.txt  --dst-plan  dst/dst-plan.txt \
-    --src-state src/local.tfstate --dst-state dst/local.tfstate \
-    --up 001_TITLE.up.sh --down 001_TITLE.down.sh
+$ terravalet move-after  --script=01-migrate-foo --before=BEFORE --after=AFTER
+```
+
+If move-before:
+
+```
+$ terravalet move-before --script=01-migrate-foo --before=BEFORE --after=AFTER
 ```
 
 ## Run the migration script
 
-1. Review the contents of `001_TITLE.up.sh`.
-2. Run it: `sh ./001_TITLE.up.sh`
+1. Review the contents of `01-migrate-foo_up.sh`.
+2. Run it: `sh ./01-migrate-foo_up.sh`
 
 ## Push the migrated states
 
 In case of error, DO NOT FORCE the push unless you understand very well what you are doing.
 
 ```
-$ cd src
-$ terraform state push local.tfstate
-```
-
-and
-
-```
-$ cd dst
-$ terraform state push local.tfstate
+$ terraform -chdir=BEFORE state push - < BEFORE.tfstate
+$ terraform -chdir=AFTER  state push - < AFTER.tfstate
 ```
 
 ## Recovery in case of error
 
-Push the two backups `src/local.tfstate.BACK` and `dst/local.tfstate.BACK`.
+Push the two backups:
+
+```
+$ terraform -chdir=BEFORE state push - < BEFORE.tfstate.BACK
+$ terraform -chdir=AFTER  state push - < AFTER.tfstate.BACK
+```
 
 # Import existing resources
 

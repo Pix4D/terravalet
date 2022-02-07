@@ -1,0 +1,23 @@
+digraph G {
+    rankdir=LR
+
+    subgraph X {
+        rank=same
+        node [color=white]
+
+        head
+        tail
+    }
+
+    subgraph cluster1 {
+        style=invis
+        node [shape=box]
+
+        0
+        "1'" [style=filled,color=yellow]
+    }
+
+    0 -> "1'"
+    head -> 0 [style=dotted]
+    tail -> "1'" [style=dotted]
+}
