@@ -23,10 +23,11 @@ func main() {
 }
 
 type args struct {
-	Rename    *RenameCmd    `arg:"subcommand:rename" help:"rename resources in the same root environment"`
-	MoveAfter *MoveAfterCmd `arg:"subcommand:move-after" help:"move resources from one root environment to AFTER another"`
-	Import    *ImportCmd    `arg:"subcommand:import" help:"import resources generated out-of-band of Terraform"`
-	Version   *struct{}     `arg:"subcommand:version" help:"show version"`
+	Rename     *RenameCmd     `arg:"subcommand:rename" help:"rename resources in the same root environment"`
+	MoveAfter  *MoveAfterCmd  `arg:"subcommand:move-after" help:"move resources from one root environment to AFTER another"`
+	MoveBefore *MoveBeforeCmd `arg:"subcommand:move-before" help:"move resources from one root environment to BEFORE another"`
+	Import     *ImportCmd     `arg:"subcommand:import" help:"import resources generated out-of-band of Terraform"`
+	Version    *struct{}      `arg:"subcommand:version" help:"show version"`
 }
 
 func (args) Description() string {
@@ -51,6 +52,12 @@ type MoveAfterCmd struct {
 	After  string `arg:"required" help:"the after root directory; will look for AFTER.tfplan and AFTER.tfstate"`
 }
 
+type MoveBeforeCmd struct {
+	Script string `arg:"required" help:"the migration scripts; will generate SCRIPT_up.sh and SCRIPT_down.sh"`
+	Before string `arg:"required" help:"the before root directory; will look for BEFORE.tfplan and BEFORE.tfstate"`
+	After  string `arg:"required" help:"the after root directory; will look for AFTER.tfstate"`
+}
+
 type ImportCmd struct {
 	UpDown
 	ResourceDefs string `arg:"--res-defs,required" help:"path to resource definitions"`
@@ -72,6 +79,9 @@ func run() error {
 	case args.MoveAfter != nil:
 		cmd := args.MoveAfter
 		return doMoveAfter(cmd.Script, cmd.Before, cmd.After)
+	case args.MoveBefore != nil:
+		cmd := args.MoveBefore
+		return doMoveBefore(cmd.Script, cmd.Before, cmd.After)
 	case args.Import != nil:
 		return doImport(args.Import.Up, args.Import.Down,
 			args.Import.SrcPlanPath, args.Import.ResourceDefs)
