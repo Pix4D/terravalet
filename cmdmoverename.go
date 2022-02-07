@@ -71,58 +71,65 @@ func doRename(upPath, downPath, planPath, localStatePath string, fuzzyMatch bool
 	return nil
 }
 
-func doMove(upPath, downPath, srcPlanPath, dstPlanPath, srcStatePath, dstStatePath string) error {
-	// We need to read srcPlanPath and dstPlanPath, while we treat as opaque
-	// srcStatePath and dstStatePath
-	srcPlanFile, err := os.Open(srcPlanPath)
+func doMoveAfter(script, before, after string) error {
+	beforePlanPath := before + ".tfplan"
+	beforePlanFile, err := os.Open(beforePlanPath)
 	if err != nil {
-		return fmt.Errorf("opening the terraform SRC plan file: %v", err)
+		return fmt.Errorf("opening the terraform BEFORE plan file: %v", err)
 	}
-	defer srcPlanFile.Close()
+	defer beforePlanFile.Close()
 
-	dstPlanFile, err := os.Open(dstPlanPath)
+	afterPlanPath := after + ".tfplan"
+	afterPlanFile, err := os.Open(afterPlanPath)
 	if err != nil {
-		return fmt.Errorf("opening the terraform DST plan file: %v", err)
+		return fmt.Errorf("opening the terraform AFTER plan file: %v", err)
 	}
-	defer dstPlanFile.Close()
+	defer beforePlanFile.Close()
 
+	upPath := script + "_up.sh"
 	upFile, err := os.Create(upPath)
 	if err != nil {
 		return fmt.Errorf("creating the up file: %v", err)
 	}
 	defer upFile.Close()
 
+	downPath := script + "_down.sh"
 	downFile, err := os.Create(downPath)
 	if err != nil {
 		return fmt.Errorf("creating the down file: %v", err)
 	}
 	defer downFile.Close()
 
-	srcCreate, srcDestroy, err := parse(srcPlanFile)
+	beforeCreate, beforeDestroy, err := parse(beforePlanFile)
 	if err != nil {
-		return fmt.Errorf("parse src-plan: %v", err)
+		return fmt.Errorf("parse BEFORE plan: %v", err)
 	}
-	if srcCreate.Size() > 0 {
-		return fmt.Errorf("src-plan contains resources to create: %v", srcCreate.List())
+	if beforeCreate.Size() > 0 {
+		return fmt.Errorf("BEFORE plan contains resources to create: %v",
+			sorted(beforeCreate.List()))
 	}
 
-	dstCreate, dstDestroy, err := parse(dstPlanFile)
+	afterCreate, afterDestroy, err := parse(afterPlanFile)
 	if err != nil {
-		return fmt.Errorf("parse dst-plan: %v", err)
+		return fmt.Errorf("parse AFTER plan: %v", err)
 	}
-	if dstDestroy.Size() > 0 {
-		return fmt.Errorf("dst-plan contains resources to destroy: %v", dstDestroy.List())
+	if afterDestroy.Size() > 0 {
+		return fmt.Errorf("AFTER plan contains resources to destroy: %v",
+			sorted(afterDestroy.List()))
 	}
 
-	upMatches, downMatches := matchExact(dstCreate, srcDestroy)
+	upMatches, downMatches := matchExact(afterCreate, beforeDestroy)
 
-	msg := collectErrors(dstCreate, srcDestroy)
+	msg := collectErrors(afterCreate, beforeDestroy)
 	if msg != "" {
 		return fmt.Errorf("matchExact:%v", msg)
 	}
 
-	upStateFlags := fmt.Sprintf("-state=%s -state-out=%s", srcStatePath, dstStatePath)
-	downStateFlags := fmt.Sprintf("-state=%s -state-out=%s", dstStatePath, srcStatePath)
+	beforeStatePath := before + ".tfstate"
+	afterStatePath := after + ".tfstate"
+
+	upStateFlags := fmt.Sprintf("-state=%s -state-out=%s", beforeStatePath, afterStatePath)
+	downStateFlags := fmt.Sprintf("-state=%s -state-out=%s", afterStatePath, beforeStatePath)
 
 	if err := upDownScript(upMatches, upStateFlags, upFile); err != nil {
 		return fmt.Errorf("writing the up script: %v", err)
@@ -137,14 +144,10 @@ func doMove(upPath, downPath, srcPlanPath, dstPlanPath, srcStatePath, dstStatePa
 func collectErrors(create *strset.Set, destroy *strset.Set) string {
 	msg := ""
 	if create.Size() != 0 {
-		elems := create.List()
-		sort.Strings(elems)
-		msg += "\nunmatched create:\n  " + strings.Join(elems, "\n  ")
+		msg += "\nunmatched create:\n  " + strings.Join(sorted(create.List()), "\n  ")
 	}
 	if destroy.Size() != 0 {
-		elems := destroy.List()
-		sort.Strings(elems)
-		msg += "\nunmatched destroy:\n  " + strings.Join(elems, "\n  ")
+		msg += "\nunmatched destroy:\n  " + strings.Join(sorted(destroy.List()), "\n  ")
 	}
 	return msg
 }
@@ -326,4 +329,20 @@ func upDownScript(matches map[string]string, stateFlags string, out io.Writer) e
 		i++
 	}
 	return nil
+}
+
+// sorted returns a sorted slice of strings.
+// Useful to be able to write
+//
+//   ... sorted(create.List()) ...
+//
+// instead of
+//
+//   elems := create.List()
+//   sort.Strings(elems)
+//   ... elems ...
+//
+func sorted(in []string) []string {
+	sort.Strings(in)
+	return in
 }
