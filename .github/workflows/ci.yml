@@ -8,7 +8,7 @@ jobs:
       matrix:
         go-version: [1.17.x]
         os: [ubuntu-latest]
-        task-version: [v3.7.0]
+        task-version: [v3.10.0]
     runs-on: ${{ matrix.os }}
     steps:
     - name: Install Go ${{ matrix.go-version }}
