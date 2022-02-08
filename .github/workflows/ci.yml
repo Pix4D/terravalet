@@ -28,3 +28,4 @@ jobs:
     - run: task install:deps
     - run: task lint
     - run: task test
+    - run: task build
