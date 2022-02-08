@@ -93,11 +93,9 @@ tasks:
         --tag {{.RELEASE_TAG}}
         --name terravalet-darwin-amd64.zip
         --file bin/darwin/terravalet-darwin-amd64.zip
-      # We don't push the git tag. Instead, in the web UI, the act of
-      # transitioning the release from draft to published will create the
-      # corresponding tag in the remote repository. This is safer, because it
-      # reduces the situations when one might be tempted to delete a public tag
-      # due to a mistake in the release.
+      # Push the tag.
+      - cmd: git push origin {{.RELEASE_TAG}}
+      # Create a draft release.
       - cmd: |
           echo "Draft release $RELEASE_TAG created successfully."
           echo "Remember to publish it in the GitHub web UI https://github.com/$GITHUB_USER/$GITHUB_REPO/releases"
