@@ -44,11 +44,42 @@ tasks:
   build:
     desc: Build the terravalet executable.
     cmds:
+      - task: check-tags
       - go build -o bin/terravalet -v -ldflags="{{.LDFLAGS}}" .
     vars: &build-vars
       FULL_VERSION:
         sh: git describe --long --dirty --always
       LDFLAGS: -w -s -X main.fullVersion={{.FULL_VERSION}}
+
+  check-tags:
+      # A lightweight tags is listed as "commit" in the output of  "git for-each-ref 'refs/tags".
+      # If we find at least one, we fail the build.
+      # To replace a lightweight tag with an annotated:
+      # 1. Checkout the lightweight tag
+      #     git checkout <tag>
+      # 2. Look up the date and committer
+      #     git log
+      # 3. Replace the lightweight tag with an annotated one, with the same date and author
+      #     GIT_COMMITTER_DATE="2021-01-31 00:00" \
+      #         git tag --force --annotate <tag> -m 'Release <tag>'
+      # 4. If the lightweight tag has also been pushed to the remote, it can become a mess
+      #    quickly, because it will force everybody to be informed and re-fetch the modified
+      #    tags.
+      # 4.1 Force push the rewritten tag
+      #         git push --force origin <tag>
+      # 4.2 Inform everybody who cloned the repo to perform the following:
+      #         git tag -d <tag>
+      #         git fetch origin tag <tag>
+      # 5. Go back to the HEAD of the branch
+      #         git checkout master
+    desc: Check if the repo contains lightweight git tags beginning with "v".
+    cmds:
+      - if test -n "$WRONG_TAGS"; then echo $HEADER; echo "$WRONG_TAGS"; echo $MSG; exit 1; fi
+    env:
+      WRONG_TAGS:
+        sh: "(git for-each-ref 'refs/tags/v*' | fgrep commit) || exit 0"
+      HEADER: "Error: this repo contains the following lightweight git tags beginning with v (so meant to be release tags):"
+      MSG: Release tags should be annotated. Read the Taskfile for how to fix.
 
   #
   # usage: env RELEASE_TAG=v0.1.0 gopass task release
@@ -69,7 +100,7 @@ tasks:
       # before building the executables, so that we can embed this information
       # in the binaries.
       # To recover: delete local tag: git tag --delete tagname
-      - git tag -a {{.RELEASE_TAG}} -m ''
+      - git tag --annotate {{.RELEASE_TAG}} -m 'Release {{.RELEASE_TAG}}'
       - task: release-linux
       - task: release-darwin
       # - task: system-test
