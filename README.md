@@ -25,7 +25,8 @@ Terravalet takes as input the output of `terraform plan` for each involved root 
 
 ### Remote and local state
 
-At least until Terraform 0.14, `terraform state mv` has a bug: if a remote backend for the state is configured (which will always be the case for prod), it will remove entries from the remote state but it will not add entries to it. It will fail silently and leave an empty backup file, so you will loose your state.
+At least until Terraform 0.14, `terraform state mv` has a bug: if a remote backend for the state is configured (which will always be the case for prod), it will remove entries from the remote state, but it will not add entries to it.
+It will fail silently and leave an empty backup file, so you will lose your state.
 
 For this reason Terravalet operates on local state and leaves to the operator the task of performing `terraform state pull` and `terraform state push`.
 
@@ -181,22 +182,43 @@ topdir/
     AFTER/     <== root module
 ```
 
+### Collect information
+
+If this is a terravalet move-after (the default):
+
+```
+$ terraform -chdir=BEFORE plan -no-color > BEFORE.tfplan
+$ terraform -chdir=AFTER  plan -no-color > AFTER.tfplan
+```
+
+In this case, you can also perform a basic validation: the number of elements to add compared to the number of elements to destroy must be the same:
+
+   ```
+   $ grep "Plan:" BEFORE.tfplan
+   Plan: 229 to add, 0 to change, 229 to destroy.
+   ```
+If there is a mismatch, then it means that you have missed something. Go back to editing the Terraform files.
+
+
+If this is a terravalet move-before (special case):
+
+```
+$ terraform -chdir=BEFORE plan -no-color > BEFORE.tfplan
+```
+
+### Collect remote state
+
 ```
 $ terraform -chdir=BEFORE state pull > BEFORE.tfstate
 $ terraform -chdir=AFTER  state pull > AFTER.tfstate
 ```
 
-```
-$ terraform -chdir=BEFORE plan -no-color > BEFORE.tfplan   # this for any move
-$ terraform -chdir=AFTER  plan -no-color > AFTER.tfplan    # this ONLY for move-before
-```
+Backup the two remote states. This is needed to recover in case of errors and must be done now.
 
 ```
 $ cp BEFORE.tfstate BEFORE.tfstate.BACK
 $ cp AFTER.tfstate AFTER.tfstate.BACK
 ```
-
-The backups are needed to recover in case of errors. They must be done now.
 
 ## Generate migration scripts
 
@@ -366,7 +388,7 @@ The idea is to tell Terravalet where to search the data to build the up/down scr
 
 Ignorable errors:
 
-1. Resource X doesn't exists yet, it resides only in new terraform configuration.
+1. Resource X doesn't exist yet, it resides only in new terraform configuration.
 2. Resource X exists, but depends on resource Y that has not been imported yet (should be fine setting the priority).
 
 NON ignorable errors:
