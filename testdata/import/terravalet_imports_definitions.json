@@ -17,6 +17,13 @@
       "pattern"
     ]
   },
+  "github_branch_protection_v3": {
+    "separator": ":",
+    "variables": [
+      "repository",
+      "branch"
+    ]
+  },
   "github_team_repository": {
     "separator": ":",
     "variables": [
