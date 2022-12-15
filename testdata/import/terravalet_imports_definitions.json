@@ -10,11 +10,11 @@
       "repository"
     ]
   },
-  "github_branch_protection_v3": {
+  "github_branch_protection": {
     "separator": ":",
     "variables": [
-      "repository",
-      "branch"
+      "repository_id",
+      "pattern"
     ]
   },
   "github_team_repository": {
