@@ -10,6 +10,13 @@
       "repository"
     ]
   },
+  "github_branch_protection": {
+    "separator": ":",
+    "variables": [
+      "repository_id",
+      "pattern"
+    ]
+  },
   "github_branch_protection_v3": {
     "separator": ":",
     "variables": [
