@@ -38,6 +38,13 @@
       "username"
     ]
   },
+  "github_issue_label": {
+    "separator": ":",
+     "variables": [
+       "repository",
+       "name"
+     ]
+  },
   "dummy_resource1": {
     "priority": 1,
     "variables": [
