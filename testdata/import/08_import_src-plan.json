@@ -134,6 +134,25 @@
             "name": "test-import-bar"
           }
         }
-      }
+      },
+      {
+        "address":"module.github.github_issue_label.all_labels[\"test-import-bar.multi word label\"]",
+        "module_address":"module.github",
+        "mode":"managed",
+        "type":"github_issue_label",
+        "name":"all_labels",
+        "index":"test-import-bar.multi word label",
+        "provider_name":"registry.terraform.io/hashicorp/github",
+        "change":{
+           "actions":[
+              "create"
+           ],
+           "before":null,
+           "after":{
+              "name":"multi word label",
+              "repository":"test-import-bar"
+           }
+        }
+     }
     ]
   }

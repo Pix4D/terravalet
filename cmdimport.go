@@ -30,9 +30,12 @@ type Definitions struct {
 
 // Keep track of the asymmetry of import subcommand.
 // When importing, the up direction wants two parameters:
-//   terraform import res-address res-id
+//
+//	terraform import res-address res-id
+//
 // while the down direction wants only one parameter:
-//   terraform state rm res-address
+//
+//	terraform state rm res-address
 type ImportElement struct {
 	Addr string
 	ID   string
@@ -178,7 +181,7 @@ func importUpScript(elements []ImportElement, out io.Writer) error {
 	cmd := "terraform import"
 	fmt.Fprintf(out, importScriptHeader, cmd, len(elements))
 	for _, elem := range elements {
-		fmt.Fprintf(out, "%s \\\n    '%s' %s\n\n", cmd, elem.Addr, elem.ID)
+		fmt.Fprintf(out, "%s \\\n    %q %q\n\n", cmd, elem.Addr, elem.ID)
 	}
 	return nil
 }
@@ -187,7 +190,7 @@ func importDownScript(elements []ImportElement, out io.Writer) error {
 	cmd := "terraform state rm"
 	fmt.Fprintf(out, importScriptHeader, cmd, len(elements))
 	for _, elem := range elements {
-		fmt.Fprintf(out, "%s \\\n    '%s'\n\n", cmd, elem.Addr)
+		fmt.Fprintf(out, "%s \\\n    %q\n\n", cmd, elem.Addr)
 	}
 	return nil
 }
