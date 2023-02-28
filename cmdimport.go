@@ -129,7 +129,7 @@ func Import(rd, definitionsFile io.Reader) ([]ImportElement, []ImportElement, er
 			msg := fmt.Sprintf("Warning: resource %s is not defined. Check %s documentation\n",
 				resource.Type, resource.ProviderName)
 			fmt.Printf("\033[1;33m%s\033[0m", msg)
-			break
+			continue
 		}
 		resourceParams := configs[resource.Type]
 		var resID []string
