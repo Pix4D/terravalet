@@ -91,6 +91,34 @@
         }
       },
       {
+        "address": "module.github.github_repository_collaborator.all_collaborators[\"test-import-foo.Pix4D-Janus\"]",
+        "type": "github_repository_collaborator",
+        "name": "all_collaborators",
+        "change": {
+          "actions": [
+            "create"
+          ],
+          "after": {
+            "repository": "test-import-foo",
+            "username": "Pix4D-Janus"
+          }
+        }
+      },
+      {
+        "address": "module.github.github_team_repository.all_teams[\"test-import-foo.developers\"]",
+        "type": "github_team_repository",
+        "name": "all_teams",
+        "change": {
+          "actions": [
+            "create"
+          ],
+          "after": {
+            "repository": "test-import-foo",
+            "team_id": "2817139"
+          }
+        }
+      },
+      {
         "address": "module.github.github_branch_default.default[\"test-import-bar\"]",
         "type": "github_branch_default",
         "name": "default",
@@ -105,6 +133,20 @@
           }
         }
       },
+      {
+      "address": "module.github.github_branch_protection.settings[\"test-import-bar:master\"]",
+      "type": "github_branch_protection",
+      "name": "settings",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "pattern": "master",
+          "repository_id": "test-import-bar"
+        }
+      }
+    },
       {
         "address": "module.github.github_branch_protection_v3.settings[\"test-import-bar:master\"]",
         "type": "github_branch_protection_v3",
