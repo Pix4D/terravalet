@@ -1,4 +1,17 @@
 {
+  "github_repository": {
+    "priority": 1,
+    "variables": [
+      "name"
+    ]
+  },
+  "github_repository_autolink_reference": {
+    "separator": "/",
+    "variables": [
+      "repository",
+      "key_prefix"
+    ]
+  },
   "github_branch_default": {
     "variables": [
       "repository"
@@ -18,17 +31,11 @@
       "branch"
     ]
   },
-  "github_issue_label": {
+  "github_team_repository": {
     "separator": ":",
-     "variables": [
-       "repository",
-       "name"
-     ]
-  },
-  "github_repository": {
-    "priority": 1,
     "variables": [
-      "name"
+      "team_id",
+      "repository"
     ]
   },
   "github_repository_collaborator": {
@@ -38,12 +45,12 @@
       "username"
     ]
   },
-  "github_team_repository": {
+  "github_issue_label": {
     "separator": ":",
-    "variables": [
-      "team_id",
-      "repository"
-    ]
+     "variables": [
+       "repository",
+       "name"
+     ]
   },
   "dummy_resource1": {
     "priority": 1,
