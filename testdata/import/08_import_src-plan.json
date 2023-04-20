@@ -195,6 +195,21 @@
           "repository": "test-import-bar"
         }
       }
+    },
+    {
+      "address": "module.github.github_repository_autolink_reference.global_autolinks[\"test-autolink-import.MYLINK-\"]",
+      "type": "github_repository_autolink_reference",
+      "name": "global_autolinks",
+      "provider_name": "registry.terraform.io/integrations/github",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "key_prefix": "WEBGIS-",
+          "repository": "test-autolink-import"
+        }
+      }
     }
   ]
 }
