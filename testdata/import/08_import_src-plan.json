@@ -1,139 +1,139 @@
 {
-    "resource_changes": [
-      {
-        "address": "module.github.github_branch_default.default[\"test-import-gh\"]",
-        "type": "github_branch_default",
-        "name": "default",
-        "provider_name": "registry.terraform.io/hashicorp/github",
-        "change": {
-          "actions": [
-            "create"
-          ],
-          "after": {
-            "branch": "staging",
-            "repository": "test-import-gh"
-          }
+  "resource_changes": [
+    {
+      "address": "module.github.github_branch_default.default[\"test-import-gh\"]",
+      "type": "github_branch_default",
+      "name": "default",
+      "provider_name": "registry.terraform.io/hashicorp/github",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "branch": "staging",
+          "repository": "test-import-gh"
         }
-      },
-      {
-        "address": "module.github.github_branch_protection_v3.settings[\"test-import-gh:master\"]",
-        "type": "github_branch_protection_v3",
-        "name": "settings",
-        "provider_name": "registry.terraform.io/hashicorp/github",
-        "change": {
-          "actions": [
-            "create"
-          ],
-          "after": {
-            "branch": "master",
-            "repository": "test-import-gh"
-          }
+      }
+    },
+    {
+      "address": "module.github.github_branch_protection_v3.settings[\"test-import-gh:master\"]",
+      "type": "github_branch_protection_v3",
+      "name": "settings",
+      "provider_name": "registry.terraform.io/hashicorp/github",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "branch": "master",
+          "repository": "test-import-gh"
         }
-      },
-      {
-        "address": "module.github.github_repository.repos[\"test-import-gh\"]",
-        "type": "github_repository",
-        "name": "repos",
-        "provider_name": "registry.terraform.io/hashicorp/github",
-        "change": {
-          "actions": [
-            "create"
-          ],
-          "after": {
-            "description": "A test repo for github import",
-            "name": "test-import-gh"
-          }
+      }
+    },
+    {
+      "address": "module.github.github_repository.repos[\"test-import-gh\"]",
+      "type": "github_repository",
+      "name": "repos",
+      "provider_name": "registry.terraform.io/hashicorp/github",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "description": "A test repo for github import",
+          "name": "test-import-gh"
         }
-      },
-      {
-        "address": "module.github.github_branch_default.default[\"test-import-foo\"]",
-        "type": "github_branch_default",
-        "name": "default",
-        "provider_name": "registry.terraform.io/hashicorp/github",
-        "change": {
-          "actions": [
-            "create"
-          ],
-          "after": {
-            "branch": "staging",
-            "repository": "test-import-foo"
-          }
+      }
+    },
+    {
+      "address": "module.github.github_branch_default.default[\"test-import-foo\"]",
+      "type": "github_branch_default",
+      "name": "default",
+      "provider_name": "registry.terraform.io/hashicorp/github",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "branch": "staging",
+          "repository": "test-import-foo"
         }
-      },
-      {
-        "address": "module.github.github_branch_protection_v3.settings[\"test-import-foo:master\"]",
-        "type": "github_branch_protection_v3",
-        "name": "settings",
-        "provider_name": "registry.terraform.io/hashicorp/github",
-        "change": {
-          "actions": [
-            "create"
-          ],
-          "after": {
-            "branch": "master",
-            "repository": "test-import-foo"
-          }
+      }
+    },
+    {
+      "address": "module.github.github_branch_protection_v3.settings[\"test-import-foo:master\"]",
+      "type": "github_branch_protection_v3",
+      "name": "settings",
+      "provider_name": "registry.terraform.io/hashicorp/github",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "branch": "master",
+          "repository": "test-import-foo"
         }
-      },
-      {
-        "address": "module.github.github_repository.repos[\"test-import-foo\"]",
-        "type": "github_repository",
-        "name": "repos",
-        "provider_name": "registry.terraform.io/hashicorp/github",
-        "change": {
-          "actions": [
-            "create"
-          ],
-          "after": {
-            "description": "A test repo for github import",
-            "name": "test-import-foo"
-          }
+      }
+    },
+    {
+      "address": "module.github.github_repository.repos[\"test-import-foo\"]",
+      "type": "github_repository",
+      "name": "repos",
+      "provider_name": "registry.terraform.io/hashicorp/github",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "description": "A test repo for github import",
+          "name": "test-import-foo"
         }
-      },
-      {
-        "address": "module.github.github_repository_collaborator.all_collaborators[\"test-import-foo.Pix4D-Janus\"]",
-        "type": "github_repository_collaborator",
-        "name": "all_collaborators",
-        "change": {
-          "actions": [
-            "create"
-          ],
-          "after": {
-            "repository": "test-import-foo",
-            "username": "Pix4D-Janus"
-          }
+      }
+    },
+    {
+      "address": "module.github.github_repository_collaborator.all_collaborators[\"test-import-foo.Pix4D-Janus\"]",
+      "type": "github_repository_collaborator",
+      "name": "all_collaborators",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "repository": "test-import-foo",
+          "username": "Pix4D-Janus"
         }
-      },
-      {
-        "address": "module.github.github_team_repository.all_teams[\"test-import-foo.developers\"]",
-        "type": "github_team_repository",
-        "name": "all_teams",
-        "change": {
-          "actions": [
-            "create"
-          ],
-          "after": {
-            "repository": "test-import-foo",
-            "team_id": "2817139"
-          }
+      }
+    },
+    {
+      "address": "module.github.github_team_repository.all_teams[\"test-import-foo.developers\"]",
+      "type": "github_team_repository",
+      "name": "all_teams",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "repository": "test-import-foo",
+          "team_id": "2817139"
         }
-      },
-      {
-        "address": "module.github.github_branch_default.default[\"test-import-bar\"]",
-        "type": "github_branch_default",
-        "name": "default",
-        "provider_name": "registry.terraform.io/hashicorp/github",
-        "change": {
-          "actions": [
-            "create"
-          ],
-          "after": {
-            "branch": "staging",
-            "repository": "test-import-bar"
-          }
+      }
+    },
+    {
+      "address": "module.github.github_branch_default.default[\"test-import-bar\"]",
+      "type": "github_branch_default",
+      "name": "default",
+      "provider_name": "registry.terraform.io/hashicorp/github",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "branch": "staging",
+          "repository": "test-import-bar"
         }
-      },
-      {
+      }
+    },
+    {
       "address": "module.github.github_branch_protection.settings[\"test-import-bar:master\"]",
       "type": "github_branch_protection",
       "name": "settings",
@@ -147,54 +147,54 @@
         }
       }
     },
-      {
-        "address": "module.github.github_branch_protection_v3.settings[\"test-import-bar:master\"]",
-        "type": "github_branch_protection_v3",
-        "name": "settings",
-        "provider_name": "registry.terraform.io/hashicorp/github",
-        "change": {
-          "actions": [
-            "create"
-          ],
-          "after": {
-            "branch": "master",
-            "repository": "test-import-bar"
-          }
+    {
+      "address": "module.github.github_branch_protection_v3.settings[\"test-import-bar:master\"]",
+      "type": "github_branch_protection_v3",
+      "name": "settings",
+      "provider_name": "registry.terraform.io/hashicorp/github",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "branch": "master",
+          "repository": "test-import-bar"
         }
-      },
-      {
-        "address": "module.github.github_repository.repos[\"test-import-bar\"]",
-        "type": "github_repository",
-        "name": "repos",
-        "provider_name": "registry.terraform.io/hashicorp/github",
-        "change": {
-          "actions": [
-            "create"
-          ],
-          "after": {
-            "description": "A test repo for github import",
-            "name": "test-import-bar"
-          }
+      }
+    },
+    {
+      "address": "module.github.github_repository.repos[\"test-import-bar\"]",
+      "type": "github_repository",
+      "name": "repos",
+      "provider_name": "registry.terraform.io/hashicorp/github",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "description": "A test repo for github import",
+          "name": "test-import-bar"
         }
-      },
-      {
-        "address":"module.github.github_issue_label.all_labels[\"test-import-bar.multi word label\"]",
-        "module_address":"module.github",
-        "mode":"managed",
-        "type":"github_issue_label",
-        "name":"all_labels",
-        "index":"test-import-bar.multi word label",
-        "provider_name":"registry.terraform.io/hashicorp/github",
-        "change":{
-           "actions":[
-              "create"
-           ],
-           "before":null,
-           "after":{
-              "name":"multi word label",
-              "repository":"test-import-bar"
-           }
+      }
+    },
+    {
+      "address": "module.github.github_issue_label.all_labels[\"test-import-bar.multi word label\"]",
+      "module_address": "module.github",
+      "mode": "managed",
+      "type": "github_issue_label",
+      "name": "all_labels",
+      "index": "test-import-bar.multi word label",
+      "provider_name": "registry.terraform.io/hashicorp/github",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "name": "multi word label",
+          "repository": "test-import-bar"
         }
-     }
-    ]
-  }
+      }
+    }
+  ]
+}
