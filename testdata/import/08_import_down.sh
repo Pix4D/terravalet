@@ -6,6 +6,7 @@
 
 # Uncomment this if you want to stop the script at first error
 # set -e
+set -x
 
 terraform state rm \
     "module.github.github_repository_autolink_reference.global_autolinks[\"test-autolink-import.MYLINK-\"]"

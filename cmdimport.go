@@ -203,5 +203,6 @@ const importScriptHeader = `#! /bin/sh
 
 # Uncomment this if you want to stop the script at first error
 # set -e
+set -x
 
 `
