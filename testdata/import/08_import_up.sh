@@ -6,6 +6,7 @@
 
 # Uncomment this if you want to stop the script at first error
 # set -e
+set -x
 
 terraform import \
     "module.github.github_repository.repos[\"test-import-bar\"]" "test-import-bar"
