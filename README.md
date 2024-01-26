@@ -59,7 +59,7 @@ There are three modes of operation:
 - [Move resources](#-move-resources-from-one-state-to-another) from one Terraform state to another.
 - [Import existing resources](#-import-existing-resources) into Terraform state.
 
-they will be explained in the following sections.
+They will be explained in the following sections.
 
 You can also look at the tests and in particular at the files below [testdata/](testdata) for a rough idea.
 
