@@ -8,9 +8,9 @@ vars:
     sh: "echo $(which gotestsum 2> /dev/null)"
   TESTRUNNER: "{{if .GOTESTSUM}}{{base .GOTESTSUM}} --{{else}}go test{{end}}"
   #
-  GOLANGCI_VERSION: v1.43.0
-  GOTESTSUM_VERSION: v1.7.0
-  GOLINES_VERSION: v0.7.0
+  GOLANGCI_VERSION: v1.55.2
+  GOTESTSUM_VERSION: v1.11.0
+  GOLINES_VERSION: v0.12.2
 
 tasks:
 
