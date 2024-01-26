@@ -6,19 +6,19 @@ jobs:
   all:
     strategy:
       matrix:
-        go-version: [1.17.x]
+        go-version: [1.21.x]
         os: [ubuntu-latest]
-        task-version: [v3.10.0]
+        task-version: [v3.34.0]
     runs-on: ${{ matrix.os }}
     steps:
     - name: Install Go ${{ matrix.go-version }}
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v4
       with:
         go-version: ${{ matrix.go-version }}
     - name: Install task ${{ matrix.task-version }}
       run: go install github.com/go-task/task/v3/cmd/task@${{ matrix.task-version }}
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         # By default, actions/checkout will persist the GITHUB_TOKEN, so that further
         # steps in the job can perform authenticated git commands (that is: WRITE to
