@@ -74,8 +74,9 @@ func run() error {
 
 	switch {
 	case args.Rename != nil:
-		return doRename(args.Rename.Up, args.Rename.Down,
-			args.Rename.PlanPath, args.Rename.LocalStatePath, args.Rename.FuzzyMatch)
+		cmd := args.Rename
+		return doRename(cmd.Up, cmd.Down, cmd.PlanPath, cmd.LocalStatePath,
+			cmd.FuzzyMatch)
 	case args.MoveAfter != nil:
 		cmd := args.MoveAfter
 		return doMoveAfter(cmd.Script, cmd.Before, cmd.After)
@@ -83,12 +84,13 @@ func run() error {
 		cmd := args.MoveBefore
 		return doMoveBefore(cmd.Script, cmd.Before, cmd.After)
 	case args.Import != nil:
-		return doImport(args.Import.Up, args.Import.Down,
-			args.Import.SrcPlanPath, args.Import.ResourceDefs)
+		cmd := args.Import
+		return doImport(cmd.Up, cmd.Down, cmd.SrcPlanPath, cmd.ResourceDefs)
 	case args.Version != nil:
 		fmt.Println("terravalet", fullVersion)
 		return nil
 	default:
-		return fmt.Errorf("internal error: unwired command: %s", parser.SubcommandNames()[0])
+		return fmt.Errorf("internal error: unwired command: %s",
+			parser.SubcommandNames()[0])
 	}
 }
