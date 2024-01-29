@@ -16,21 +16,27 @@ var (
 )
 
 func main() {
-	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
+	os.Exit(Main())
 }
 
-type args struct {
+func Main() int {
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		return 1
+	}
+	return 0
+}
+
+type Args struct {
 	Rename     *RenameCmd     `arg:"subcommand:rename" help:"rename resources in the same root environment"`
 	MoveAfter  *MoveAfterCmd  `arg:"subcommand:move-after" help:"move resources from one root environment to AFTER another"`
 	MoveBefore *MoveBeforeCmd `arg:"subcommand:move-before" help:"move resources from one root environment to BEFORE another"`
 	Import     *ImportCmd     `arg:"subcommand:import" help:"import resources generated out-of-band of Terraform"`
+	Remove     *RemoveCmd     `arg:"subcommand:remove" help:"remove resources"`
 	Version    *struct{}      `arg:"subcommand:version" help:"show version"`
 }
 
-func (args) Description() string {
+func (Args) Description() string {
 	return "terravalet - helps with advanced Terraform operations\n"
 }
 
@@ -64,8 +70,13 @@ type ImportCmd struct {
 	SrcPlanPath  string `arg:"--src-plan,required" help:"path to the SRC terraform plan in JSON format"`
 }
 
+type RemoveCmd struct {
+	Up   string `arg:"required" help:"path of the up script to generate (NNN_TITLE.up.sh)"`
+	Plan string `arg:"required" help:"path to to the output of 'terraform plan -no-color'"`
+}
+
 func run() error {
-	var args args
+	var args Args
 
 	parser := arg.MustParse(&args)
 	if parser.Subcommand() == nil {
@@ -86,6 +97,9 @@ func run() error {
 	case args.Import != nil:
 		cmd := args.Import
 		return doImport(cmd.Up, cmd.Down, cmd.SrcPlanPath, cmd.ResourceDefs)
+	case args.Remove != nil:
+		cmd := args.Remove
+		return doRemove(cmd.Plan, cmd.Up)
 	case args.Version != nil:
 		fmt.Println("terravalet", fullVersion)
 		return nil
