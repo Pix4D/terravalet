@@ -34,6 +34,10 @@ For this reason Terravalet operates on local state and leaves to the operator th
 
 Be careful when using Terraform workspaces, since they are invisible and persistent global state :-(. Remember to always explicitly run `terraform workspace select` before anything else.
 
+### Interactions with the "moved" block
+
+After the creation of Terravalet, Terraform introduced the `moved` block, which can be seen as an alternative to certain usages of Terravalet. See [Terraform: refactoring](https://developer.hashicorp.com/terraform/language/modules/develop/refactoring)) for more information.
+
 ## Install
 
 ### Install from binary package
