@@ -5,6 +5,7 @@ A tool to help with advanced, low-level [Terraform](https://www.terraform.io/) o
 - Rename resources within the same Terraform state, with optional fuzzy match.
 - Move resources from one Terraform state to another.
 - Import existing resources into Terraform state.
+- Remove existing resources from Terraform state.
 
 **DISCLAIMER Manipulating Terraform state is inherently dangerous. It is your responsibility to be careful and ensure you UNDERSTAND what you are doing**.
 
@@ -57,11 +58,12 @@ After the creation of Terravalet, Terraform introduced the `moved` block, which 
 
 ## Usage
 
-There are three modes of operation:
+Terravalet supports multiple operations:
 
 - [Rename resources](#rename-resources-within-the-same-state) within the same Terraform state, with optional fuzzy match.
 - [Move resources](#-move-resources-from-one-state-to-another) from one Terraform state to another.
 - [Import existing resources](#-import-existing-resources) into Terraform state.
+- [Remove existing resources](#removing-existing-resources) from Terraform state.
 
 They will be explained in the following sections.
 
@@ -398,6 +400,27 @@ Ignorable errors:
 NON ignorable errors:
 
 1. Provider specific argument ID is wrong.
+
+# Removing existing resources
+
+Although `terraform state rm` allows to remove _individual_ resources, but when a real-world resource is composed of multiple terraform resources, using `terraform state rm` becomes tedious and error-prone. Even worse when multiple high-level resources are removed together.
+
+Thus, `terravalet remove` parses a plan file and creates all the `state rm` commands for you.
+
+1. Remove the resources in the Terraform configuration files.
+2. Generate the plan file:
+   ```
+   $ terraform -chdir=<the tf root> plan -no-color > remove-plan.txt
+   ```
+3. Run `terravalet remove`. As usual, this is a safe operation, since it will only generate a script file:
+   ```
+   $ terravalet remove --up=remove.sh --plan=remove-plan.txt
+   ```
+4. Carefully examine the generated script file `remove.sh`!
+5. Execute the scrip.
+   ```
+   $ sh ./remove.sh
+   ```
 
 # Making a release
 
