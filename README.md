@@ -426,13 +426,17 @@ Thus, `terravalet remove` parses a plan file and creates all the `state rm` comm
 
 ## Setup
 
-1. Install [github-release](https://github.com/github-release/github-release).
-2. Install [gopass](https://github.com/gopasspw/gopass) or equivalent.
-3. Configure a GitHub token:
-    * Go to [Personal Access tokens](https://github.com/settings/tokens)
+1. Install [gopass](https://github.com/gopasspw/gopass) or equivalent.
+2. Configure a fine-grained personal access token, scoped to the terravalet repository:
+    * Go to [Fine-grained personal access tokens](https://github.com/settings/tokens?type=beta)
     * Click on "Generate new token"
-    * Select only the `repo` scope
-4. Store the token securely with a tool like `gopass`. The name `GITHUB_TOKEN` is expected by `github-release`
+    * Give it a name like "terravalet-releases"
+    * Select "Resource owner" -> Pix4D
+    * Select "Repository access" -> "Only select repositories" -> Terravalet
+    * Select "Repository permissions"
+      * "Contents" -> RW
+    * Generate the token 
+3. Store the token securely with a tool like `gopass`. The name `GITHUB_TOKEN` is expected by `github-release`
    ```
    $ gopass insert gh/terravalet/GITHUB_TOKEN
    ```
@@ -441,13 +445,18 @@ Thus, `terravalet remove` parses a plan file and creates all the `state rm` comm
 
 1. Update [CHANGELOG](CHANGELOG.md)
 2. Update this README and/or additional documentation.
-3. Commit and push.
-4. Begin the release process with
+3. Make and merge a PR.
+4. Ensure your local master branch is up-to-date:
    ```
-   $ env RELEASE_TAG=v0.1.0 gopass env gh/terravalet task release
+   $ git checkout master
+   $ git pull
    ```
-5. Finish the release process by following the instructions printed by `task` above.
-6. To recover from a half-baked release, see the hints in the [Taskfile](Taskfile.yml).
+5. Begin the release process with
+   ```
+   $ RELEASE_TAG=v0.1.0 gopass env gh/terravalet task release
+   ```
+6. Finish the release process by following the instructions printed by `task` above.
+7. To recover from a half-baked release, see the hints in the [Taskfile](Taskfile.yml).
 
 # History and credits
 
