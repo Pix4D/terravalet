@@ -20,6 +20,7 @@ tasks:
       - go install github.com/golangci/golangci-lint/cmd/golangci-lint@{{.GOLANGCI_VERSION}}
       - go install gotest.tools/gotestsum@{{.GOTESTSUM_VERSION}}
       - go install github.com/segmentio/golines@{{.GOLINES_VERSION}}
+      - go install github.com/github-release/github-release@latest
 
   lint:
     desc: Lint the code.
@@ -51,7 +52,7 @@ tasks:
       LDFLAGS: -w -s -X main.fullVersion={{.FULL_VERSION}}
 
   #
-  # usage: env RELEASE_TAG=v0.1.0 gopass task release
+  # usage: RELEASE_TAG=v0.1.0 gopass env gh/terravalet task release
   #
   release:
     desc: Build a release and upload to GitHub as draft. You need to transition
@@ -71,7 +72,8 @@ tasks:
       # To recover: delete local tag: git tag --delete tagname
       - git tag --annotate {{.RELEASE_TAG}} -m 'Release {{.RELEASE_TAG}}'
       - task: release-linux
-      - task: release-darwin
+      - task: release-darwin-amd
+      - task: release-darwin-arm
       # - task: system-test
       - task: test
       # We create the release as a draft (that is: not visible to the public).
@@ -82,6 +84,16 @@ tasks:
         --draft
         --description
         "See the [CHANGELOG](https://github.com/$GITHUB_USER/$GITHUB_REPO/blob/{{.RELEASE_TAG}}/CHANGELOG.md)"
+
+      #
+      # Since 2024, if we upload immeditately after having created the draft release,
+      # we get:
+      #
+      #   error: could not find the release corresponding to tag vX.Y.Z
+      #
+      # to avoid this, we sleep a moment :-/
+      - sleep 2
+
       # Upload the artifacts.
       - >
         github-release upload
@@ -93,6 +105,11 @@ tasks:
         --tag {{.RELEASE_TAG}}
         --name terravalet-darwin-amd64.zip
         --file bin/darwin/terravalet-darwin-amd64.zip
+      - >
+        github-release upload
+        --tag {{.RELEASE_TAG}}
+        --name terravalet-darwin-arm64.zip
+        --file bin/darwin/terravalet-darwin-arm64.zip
       # Push the tag.
       - cmd: git push origin {{.RELEASE_TAG}}
       # Create a draft release.
@@ -105,18 +122,29 @@ tasks:
       GITHUB_REPO: terravalet
       # GITHUB_TOKEN expected to be set securely via `gopass` or equivalent
   release-linux:
-    cmds: &release-cmds
+    cmds:
       - go build -o bin/$GOOS/terravalet -v -ldflags="{{.LDFLAGS}}" .
-      - zip bin/$GOOS/terravalet-$GOOS-$GOARCH.zip bin/$GOOS/terravalet
+      - cd bin/$GOOS && zip terravalet-$GOOS-$GOARCH.zip terravalet
     env:
       CGO_ENABLED: 0
       GOOS: linux
       GOARCH: amd64
     vars: *build-vars
-  release-darwin:
-    cmds: *release-cmds
+  release-darwin-amd:
+    cmds:
+      - go build -o bin/$GOOS/terravalet -v -ldflags="{{.LDFLAGS}}" .
+      - cd bin/$GOOS && zip terravalet-$GOOS-$GOARCH.zip terravalet
     env:
       CGO_ENABLED: 0
       GOOS: darwin
       GOARCH: amd64
+    vars: *build-vars
+  release-darwin-arm:
+    cmds:
+      - go build -o bin/$GOOS/terravalet -v -ldflags="{{.LDFLAGS}}" .
+      - cd bin/$GOOS && zip terravalet-$GOOS-$GOARCH.zip terravalet
+    env:
+      CGO_ENABLED: 0
+      GOOS: darwin
+      GOARCH: arm64
     vars: *build-vars
