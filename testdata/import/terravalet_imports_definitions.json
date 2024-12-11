@@ -45,6 +45,11 @@
       "username"
     ]
   },
+  "github_repository_collaborators": {
+    "variables": [
+      "repository"
+    ]
+  },
   "github_issue_label": {
     "separator": ":",
      "variables": [
