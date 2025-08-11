@@ -116,3 +116,9 @@ func run() error {
 			parser.SubcommandNames()[0])
 	}
 }
+
+func MakeErrorf(prefix string) func(format string, a ...any) error {
+	return func(format string, a ...any) error {
+		return fmt.Errorf(prefix+": "+format, a...)
+	}
+}
