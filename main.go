@@ -33,6 +33,7 @@ type Args struct {
 	MoveBefore *MoveBeforeCmd `arg:"subcommand:move-before" help:"move resources from one root environment to BEFORE another"`
 	Import     *ImportCmd     `arg:"subcommand:import" help:"import resources generated out-of-band of Terraform"`
 	Remove     *RemoveCmd     `arg:"subcommand:remove" help:"remove resources"`
+	Diagram    *DiagramCmd    `arg:"subcommand:diagram" help:"visual display of Terraform state"`
 	Version    *struct{}      `arg:"subcommand:version" help:"show version"`
 }
 
@@ -75,6 +76,10 @@ type RemoveCmd struct {
 	Plan string `arg:"required" help:"path to to the output of 'terraform plan -no-color'"`
 }
 
+type DiagramCmd struct {
+	StatePath string `arg:"required" help:"path of the state file, in JSON format (generate with: terraform show -json)"`
+}
+
 func run() error {
 	var args Args
 
@@ -100,6 +105,9 @@ func run() error {
 	case args.Remove != nil:
 		cmd := args.Remove
 		return doRemove(cmd.Plan, cmd.Up)
+	case args.Diagram != nil:
+		cmd := args.Diagram
+		return doDiagram(cmd.StatePath)
 	case args.Version != nil:
 		fmt.Println("terravalet", fullVersion)
 		return nil
