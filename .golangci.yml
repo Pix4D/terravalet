@@ -1,7 +1,22 @@
-# See https://golangci-lint.run/usage/configuration/#config-file
-
+version: "2"
 linters:
-  # NOTE: `enable` _adds_ to the default linters!
-  # To see the currently enabled linters, run `golangci-lint linters`
   enable:
     - gocritic
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

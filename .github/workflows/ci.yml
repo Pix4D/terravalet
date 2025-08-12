@@ -6,13 +6,13 @@ jobs:
   all:
     strategy:
       matrix:
-        go-version: [1.21.x]
+        go-version: [1.24.x]
         os: [ubuntu-latest]
-        task-version: [v3.34.0]
+        task-version: [v3.44.1]
     runs-on: ${{ matrix.os }}
     steps:
     - name: Install Go ${{ matrix.go-version }}
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: ${{ matrix.go-version }}
     - name: Install task ${{ matrix.task-version }}
